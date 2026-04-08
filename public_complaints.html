@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Public Complaints - CivicFix</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navbar injected by script.js -->
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <h3 class="mb-lg" style="padding-left: 1rem;">Menu</h3>
+            <ul class="sidebar-nav">
+                <li><a href="citizen.html" class="sidebar-link">Dashboard</a></li>
+                <li><a href="submit_complaint.html" class="sidebar-link">Submit Complaint</a></li>
+                <li><a href="my_complaints.html" class="sidebar-link">My Complaints</a></li>
+                <li><a href="public_complaints.html" class="sidebar-link active">Public Complaints</a></li>
+                <li><a href="announcements.html" class="sidebar-link">Announcements</a></li>
+                <li><a href="feedback.html" class="sidebar-link">Feedback</a></li>
+                <li><a href="volunteer.html" class="sidebar-link">Volunteer</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <h2 class="mb-lg">Community Issues</h2>
+
+            <div id="publicList" class="flex flex-col gap-md">
+                <!-- Loaded dynamically -->
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const user = Auth.check();
+        UI.renderNavbar();
+
+        // Get all public complaints
+        const complaints = Storage.getComplaints().filter(c => c.isPublic).reverse();
+        const container = document.getElementById('publicList');
+
+        if (complaints.length === 0) {
+            container.innerHTML = '<p class="text-secondary">No public complaints found.</p>';
+        } else {
+            container.innerHTML = complaints.map(c => `
+                <div class="card" onclick="window.location.href='complaint_details.html?id=${c.id}'" style="cursor: pointer;">
+                    <div class="flex justify-between items-center mb-sm">
+                        <h3 style="font-size: 1.25rem;">${c.category}</h3>
+                        <span class="text-secondary" style="font-size: 0.875rem;">by ${c.userName}</span>
+                    </div>
+                    <p class="text-secondary mb-sm">📍 ${c.location} &bull; ${UI.formatDate(c.timestamp)}</p>
+                    <p class="mb-md" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${c.description}</p>
+                    
+                    <div class="flex gap-md items-center mt-md pt-sm border-t" style="border-top: 1px solid var(--border-color);">
+                        <button class="btn btn-outline" onclick="upvote('${c.id}'); event.stopPropagation();" style="padding: 0.5rem 1rem;">
+                            👍 Upvote (${c.upvotes || 0})
+                        </button>
+                        <span class="badge ${c.status.toLowerCase()}" 
+                              style="background: ${c.status === 'Resolved' ? '#def7ec' : '#fff1f2'}; 
+                                     color: ${c.status === 'Resolved' ? '#03543f' : '#9e1c23'};
+                                     padding: 0.25rem 0.75rem; border-radius: 99px; font-weight: 600; font-size: 0.875rem;">
+                            Status: ${c.status}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function upvote(id) {
+            // Simple simulation: increment upvote in local storage
+            let allComplaints = Storage.getComplaints();
+            const complaint = allComplaints.find(c => c.id === id);
+            if (complaint) {
+                complaint.upvotes = (complaint.upvotes || 0) + 1;
+                Storage.set('civic_complaints', allComplaints);
+                location.reload(); // Refresh to show new count
+            }
+        }
+    </script>
+</body>
+
+</html>

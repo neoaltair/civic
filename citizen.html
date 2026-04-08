@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Citizen Dashboard - CivicFix</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navbar injected by script.js -->
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <h3 class="mb-lg" style="padding-left: 1rem;">Menu</h3>
+            <ul class="sidebar-nav">
+                <li><a href="citizen.html" class="sidebar-link active">Dashboard</a></li>
+                <li><a href="submit_complaint.html" class="sidebar-link">Submit Complaint</a></li>
+                <li><a href="my_complaints.html" class="sidebar-link">My Complaints</a></li>
+                <li><a href="public_complaints.html" class="sidebar-link">Public Complaints</a></li>
+                <li><a href="announcements.html" class="sidebar-link">Announcements</a></li>
+                <li><a href="feedback.html" class="sidebar-link">Feedback</a></li>
+                <li><a href="volunteer.html" class="sidebar-link">Volunteer</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-lg">
+                <h2 id="welcomeMsg">Welcome back!</h2>
+                <a href="submit_complaint.html" class="btn btn-primary">
+                    <span style="font-size: 1.2rem; margin-right: 0.5rem;">+</span> New Complaint
+                </a>
+            </header>
+
+            <div class="grid grid-cols-3 gap-md mb-xl">
+                <div class="card flex flex-col items-center justify-center p-lg">
+                    <h3 class="text-secondary" style="font-size: 1rem; text-transform: uppercase;">Active Complaints
+                    </h3>
+                    <p id="activeCount" style="font-size: 3rem; font-weight: 800; color: var(--secondary-color);">0</p>
+                </div>
+                <div class="card flex flex-col items-center justify-center p-lg">
+                    <h3 class="text-secondary" style="font-size: 1rem; text-transform: uppercase;">Resolved Issues</h3>
+                    <p id="resolvedCount" style="font-size: 3rem; font-weight: 800; color: var(--accent-color);">0</p>
+                </div>
+                <div class="card flex flex-col items-center justify-center p-lg">
+                    <h3 class="text-secondary" style="font-size: 1rem; text-transform: uppercase;">Announcements</h3>
+                    <p id="announcementCount" style="font-size: 3rem; font-weight: 800; color: var(--primary-color);">0
+                    </p>
+                </div>
+            </div>
+
+            <section>
+                <h3 class="mb-md">Recent Activity</h3>
+                <div id="recentActivity" class="flex flex-col gap-sm">
+                    <!-- Loaded dynamically -->
+                    <p class="text-secondary">No recent activity found.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const user = Auth.check();
+        UI.renderNavbar();
+        document.getElementById('welcomeMsg').textContent = `Welcome back, ${user.name}!`;
+
+        // Load stats
+        const complaints = Storage.getComplaints();
+        const myComplaints = complaints.filter(c => c.userEmail === user.email);
+        const resolved = myComplaints.filter(c => c.status === 'Resolved').length;
+        const active = myComplaints.length - resolved;
+        const announcements = Storage.getAnnouncements().length;
+
+        document.getElementById('activeCount').textContent = active;
+        document.getElementById('resolvedCount').textContent = resolved;
+        document.getElementById('announcementCount').textContent = announcements;
+
+        // Load recent activity (last 3 complaints)
+        const recent = myComplaints.slice(-3).reverse();
+        const activityContainer = document.getElementById('recentActivity');
+
+        if (recent.length > 0) {
+            activityContainer.innerHTML = recent.map(c => `
+                <div class="card p-sm flex justify-between items-center">
+                    <div>
+                        <h4 style="font-size: 1.1rem;">${c.category}</h4>
+                        <span class="text-secondary" style="font-size: 0.9rem;">${UI.formatDate(c.timestamp)}</span>
+                    </div>
+                    <span style="font-weight: 600; color: ${c.status === 'Resolved' ? 'var(--accent-color)' : 'var(--secondary-color)'}">
+                        ${c.status}
+                    </span>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+
+</html>

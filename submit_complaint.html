@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Complaint - CivicFix</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+
+<body>
+    <!-- Navbar injected by script.js -->
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <h3 class="mb-lg" style="padding-left: 1rem;">Menu</h3>
+            <ul class="sidebar-nav">
+                <li><a href="citizen.html" class="sidebar-link">Dashboard</a></li>
+                <li><a href="submit_complaint.html" class="sidebar-link active">Submit Complaint</a></li>
+                <li><a href="my_complaints.html" class="sidebar-link">My Complaints</a></li>
+                <li><a href="public_complaints.html" class="sidebar-link">Public Complaints</a></li>
+                <li><a href="announcements.html" class="sidebar-link">Announcements</a></li>
+                <li><a href="feedback.html" class="sidebar-link">Feedback</a></li>
+                <li><a href="volunteer.html" class="sidebar-link">Volunteer</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <h2 class="mb-lg">Report an Issue</h2>
+
+            <div class="card" style="max-width: 800px;">
+                <form id="complaintForm">
+                    <div class="grid grid-cols-2 gap-md">
+                        <div class="input-group">
+                            <label for="category">Issue Category</label>
+                            <select id="category" class="input-control" required>
+                                <option value="">Select Category</option>
+                                <option value="Roads & Potholes">Roads & Potholes</option>
+                                <option value="Garbage Collection">Garbage Collection</option>
+                                <option value="Street Lighting">Street Lighting</option>
+                                <option value="Water Supply">Water Supply</option>
+                                <option value="Noise Pollution">Noise Pollution</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="location">Location (Address/Landmark)</label>
+                            <input type="text" id="location" class="input-control" required
+                                placeholder="e.g., Main St & 5th Ave">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" class="input-control" rows="5" required
+                            placeholder="Describe the issue in detail..."></textarea>
+                    </div>
+
+                    <!-- Map Widget -->
+                    <div class="input-group">
+                        <label>Pin Location on Map</label>
+                        <div id="map"
+                            style="height: 300px; border-radius: var(--radius-md); z-index: 1; border: 1px solid var(--border-color);">
+                        </div>
+                        <input type="hidden" id="lat">
+                        <input type="hidden" id="lng">
+                        <p class="text-secondary mt-xs" style="font-size: 0.8rem;" id="location-status">Click on the map
+                            to pin the precise location.</p>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="image">Upload Image (Optional)</label>
+                        <input type="file" id="image" class="input-control" accept="image/*">
+                    </div>
+
+                    <div class="input-group">
+                        <label>
+                            <input type="checkbox" id="isPublic" checked> Make this complaint public?
+                        </label>
+                        <p class="text-secondary" style="font-size: 0.8rem;">Public complaints can be viewed and upvoted
+                            by other citizens.</p>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Submit Complaint</button>
+                    <a href="citizen.html" class="btn btn-outline ml-sm">Cancel</a>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const user = Auth.check();
+        UI.renderNavbar();
+
+        // Initialize Map
+        const map = L.map('map').setView([13.0827, 80.2707], 13); // Default Chennai
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        let marker;
+
+        // Try to get user location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(position => {
+                const { latitude, longitude } = position.coords;
+                map.setView([latitude, longitude], 15);
+            }, () => {
+                console.log('Location access denied or error');
+            });
+        }
+
+        map.on('click', function (e) {
+            const { lat, lng } = e.latlng;
+
+            if (marker) {
+                marker.setLatLng(e.latlng);
+            } else {
+                marker = L.marker(e.latlng).addTo(map);
+            }
+
+            document.getElementById('lat').value = lat;
+            document.getElementById('lng').value = lng;
+            document.getElementById('location-status').textContent = `Selected Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        });
+
+        document.getElementById('complaintForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const category = document.getElementById('category').value;
+            const location = document.getElementById('location').value;
+            const description = document.getElementById('description').value;
+            const isPublic = document.getElementById('isPublic').checked;
+            const lat = document.getElementById('lat').value;
+            const lng = document.getElementById('lng').value;
+
+            // Image handling would normally involve file upload, here we just simulate
+            const imageInput = document.getElementById('image');
+            const hasImage = imageInput.files.length > 0;
+            const imageName = hasImage ? imageInput.files[0].name : null;
+
+            const complaint = {
+                userEmail: user.email,
+                userName: user.name,
+                category,
+                location,
+                description,
+                imageName,
+                isPublic,
+                coordinates: (lat && lng) ? { lat, lng } : null,
+                upvotes: 0,
+                comments: []
+            };
+
+            Storage.addComplaint(complaint);
+
+            alert('Complaint submitted successfully!');
+            window.location.href = 'my_complaints.html';
+        });
+    </script>
+</body>
+
+</html>

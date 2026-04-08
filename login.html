@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - CivicFix</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <main class="container flex justify-center items-center" style="min-height: 80vh;">
+        <div class="card" style="width: 100%; max-width: 400px;">
+            <h2 class="text-center mb-lg">Welcome Back</h2>
+
+            <form id="loginForm">
+                <div class="input-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" class="input-control" required placeholder="john@example.com">
+                </div>
+
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="input-control" required placeholder="••••••••">
+                </div>
+
+                <div id="message" class="mb-md text-center hidden"></div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+            </form>
+
+            <p class="text-center mt-md text-secondary">
+                Don't have an account? <a href="register.html">Register</a>
+            </p>
+
+            <div class="mt-lg p-sm" style="background: #f1f5f9; border-radius: 8px; font-size: 0.8rem;">
+                <p><strong>Demo Admin:</strong> admin@civic.com / admin</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+    <script>
+        UI.renderNavbar();
+
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const result = Auth.login(email, password);
+
+            const msg = document.getElementById('message');
+            msg.textContent = result.message;
+            msg.classList.remove('hidden');
+
+            if (result.success) {
+                msg.className = 'mb-md text-center text-success';
+                setTimeout(() => {
+                    if (result.user.role === 'admin') {
+                        window.location.href = 'admin.html';
+                    } else {
+                        window.location.href = 'citizen.html';
+                    }
+                }, 1000);
+            } else {
+                msg.className = 'mb-md text-center text-danger';
+            }
+        });
+    </script>
+</body>
+
+</html>

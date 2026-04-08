@@ -1,0 +1,113 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complaint Details - CivicFix</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+<body>
+    <!-- Navbar injected by script.js -->
+    <main class="container mt-xl mb-xl" style="max-width: 800px;">
+        <a href="javascript:history.back()" class="btn btn-outline mb-md">&larr; Back to List</a>
+        <div id="complaintContainer" class="card">
+            <!-- Loading -->
+            <p class="text-center p-xl">Loading details...</p>
+        </div>
+    </main>
+    <script src="script.js"></script>
+    <script>
+        const user = Auth.check();
+        UI.renderNavbar();
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = urlParams.get('id');
+        const container = document.getElementById('complaintContainer');
+        if (!id) {
+            container.innerHTML = '<p class="text-danger p-xl text-center">Invalid Complaint ID.</p>';
+        } else {
+            const complaints = Storage.getComplaints();
+            const c = complaints.find(item => item.id === id);
+            if (!c) {
+                container.innerHTML = '<p class="text-danger p-xl text-center">Complaint not found.</p>';
+            } else {
+                renderDetails(c);
+            }
+        }
+        function renderDetails(c) {
+            container.innerHTML = `
+                <div class="flex justify-between items-start mb-md">
+                    <div>
+                        <h1 style="font-size: 1.75rem;">${c.category}</h1>
+                        <p class="text-secondary mt-xs">
+                            Issue #${c.id} &bull; ${UI.formatDate(c.timestamp)}
+                        </p>
+                    </div>
+                    <span class="badge" 
+                          style="background: ${getStatusColor(c.status).bg}; 
+                                 color: ${getStatusColor(c.status).text};
+                                 padding: 0.5rem 1rem; border-radius: 99px; font-weight: 600; font-size: 1rem;">
+                        ${c.status}
+                    </span>
+                </div>
+                <div class="grid grid-cols-2 gap-md mb-lg">
+                    <div class="p-md" style="background: #f8fafc; border-radius: var(--radius-md);">
+                        <h3 class="mb-sm text-secondary text-sm uppercase">Location</h3>
+                        <p class="font-bold">${c.location}</p>
+                    </div>
+                    <div class="p-md" style="background: #f8fafc; border-radius: var(--radius-md);">
+                        <h3 class="mb-sm text-secondary text-sm uppercase">Reported By</h3>
+                        <p class="font-bold">${c.userName} ${c.isPublic ? '' : '(Private)'}</p>
+                    </div>
+                </div>
+                <h3 class="mb-sm">Description</h3>
+                <p class="mb-lg" style="line-height: 1.8;">${c.description}</p>
+                ${c.imageName ? `
+                    <h3 class="mb-sm">Attachment</h3>
+                    <div class="mb-lg p-md" style="border: 1px dashed var(--border-color); border-radius: var(--radius-md); text-align: center;">
+                        <p>📄 ${c.imageName} (Mock Display)</p>
+                    </div>
+                ` : ''}
+                ${c.coordinates ? `
+                    <h3 class="mb-sm">Map Location</h3>
+                    <div id="detailMap" style="height: 300px; border-radius: var(--radius-md); border: 1px solid var(--border-color);" class="mb-lg"></div>
+                ` : ''}
+                ${c.remarks ? `
+                     <div class="p-md mt-lg" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md);">
+                        <h3 class="mb-sm" style="color: #166534;">Admin Remarks</h3>
+                        <p style="color: #14532d;">${c.remarks}</p>
+                    </div>
+                ` : ''}
+            `;
+            if (c.coordinates) {
+                setTimeout(() => {
+                    const map = L.map('detailMap').setView([c.coordinates.lat, c.coordinates.lng], 15);
+                    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '&copy; OpenStreetMap'
+                    }).addTo(map);
+                    L.marker([c.coordinates.lat, c.coordinates.lng]).addTo(map)
+                        .bindPopup(c.location)
+                        .openPopup();
+                }, 100);
+            }
+        }
+        function getStatusColor(status) {
+            switch (status) {
+                case 'Pending': return { bg: '#fff1f2', text: '#9e1c23' };
+                case 'In Progress': return { bg: '#fff7ed', text: '#9a3412' };
+                case 'Resolved': return { bg: '#f0fdf4', text: '#15803d' };
+                default: return { bg: '#f1f5f9', text: '#475569' };
+            }
+        }
+    </script>
+</body>
+</html>

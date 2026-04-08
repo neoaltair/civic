@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Volunteer - CivicFix</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navbar injected by script.js -->
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <h3 class="mb-lg" style="padding-left: 1rem;">Menu</h3>
+            <ul class="sidebar-nav">
+                <li><a href="citizen.html" class="sidebar-link">Dashboard</a></li>
+                <li><a href="submit_complaint.html" class="sidebar-link">Submit Complaint</a></li>
+                <li><a href="my_complaints.html" class="sidebar-link">My Complaints</a></li>
+                <li><a href="public_complaints.html" class="sidebar-link">Public Complaints</a></li>
+                <li><a href="announcements.html" class="sidebar-link">Announcements</a></li>
+                <li><a href="feedback.html" class="sidebar-link">Feedback</a></li>
+                <li><a href="volunteer.html" class="sidebar-link active">Volunteer</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <h2 class="mb-lg">Get Involved</h2>
+
+            <div class="grid grid-cols-2 gap-md mb-xl">
+                <div class="card" style="grid-column: span 2;">
+                    <h3>Upcoming Community Events</h3>
+                    <p class="text-secondary mb-md">Join your neighbors in making a difference.</p>
+
+                    <div id="eventsList" class="flex flex-col gap-md">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const user = Auth.check();
+        UI.renderNavbar();
+
+        function renderEvents() {
+            const events = Storage.getEvents().sort((a, b) => new Date(a.date) - new Date(b.date));
+            const container = document.getElementById('eventsList');
+
+            if (events.length === 0) {
+                container.innerHTML = '<p class="text-secondary p-lg text-center bg-light" style="border-radius: var(--radius-md);">No upcoming events at the moment.</p>';
+            } else {
+                container.innerHTML = events.map(e => {
+                    const isJoined = e.attendees.includes(user.email);
+                    return `
+                        <div class="card p-md flex justify-between items-center" style="border-left: 5px solid var(--accent-color);">
+                            <div>
+                                <h4 style="font-size: 1.2rem;">${e.title}</h4>
+                                <p class="text-secondary mt-xs">📅 ${new Date(e.date).toLocaleString()} &bull; 📍 ${e.location}</p>
+                                <p class="mt-sm">${e.description}</p>
+                                <p class="mt-xs text-sm font-bold text-success">${e.attendees.length} Volunteers Participating</p>
+                            </div>
+                            <button onclick="toggleParticipation('${e.id}', ${isJoined})" 
+                                    class="btn ${isJoined ? 'btn-outline' : 'btn-primary'}" 
+                                    style="width: 140px;">
+                                ${isJoined ? '✓ Joined' : 'Volunteer'}
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function toggleParticipation(eventId, isJoined) {
+            if (isJoined) {
+                if (confirm('Do you want to leave this event?')) {
+                    Storage.leaveEvent(eventId, user.email);
+                }
+            } else {
+                Storage.joinEvent(eventId, user.email);
+                alert('You have successfully joined the event!');
+            }
+            renderEvents();
+        }
+
+        document.getElementById('volunteerForm')?.addEventListener('submit', (e) => { // Optional form for skills
+            e.preventDefault();
+            alert('Thank you for registering your interests!');
+        });
+
+        renderEvents();
+    </script>
+</body>
+
+</html>

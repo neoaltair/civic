@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Announcements - CivicFix Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navbar injected by script.js -->
+
+    <div class="dashboard-layout">
+        <aside class="sidebar" style="background-color: #f1f5f9;">
+            <h3 class="mb-lg" style="padding-left: 1rem;">Admin Panel</h3>
+            <ul class="sidebar-nav">
+                <li><a href="admin.html" class="sidebar-link">Dashboard</a></li>
+                <li><a href="manage_complaints.html" class="sidebar-link">Manage Complaints</a></li>
+                <li><a href="analytics.html" class="sidebar-link">Analytics</a></li>
+                <li><a href="announcements_admin.html" class="sidebar-link active">Announcements</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <h2 class="mb-lg">Manage Announcements</h2>
+
+            <div class="card mb-xl">
+                <h3>Post New Announcement</h3>
+                <form id="announcementForm" class="mt-md">
+                    <div class="input-group">
+                        <label for="title">Title</label>
+                        <input type="text" id="title" class="input-control" required
+                            placeholder="e.g. Road Closure Notice">
+                    </div>
+                    <div class="input-group">
+                        <label for="content">Content</label>
+                        <textarea id="content" class="input-control" rows="4" required
+                            placeholder="Details about the announcement..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Publish Announcement</button>
+                </form>
+            </div>
+
+            <h3 class="mb-md">History</h3>
+            <div id="announcementList" class="flex flex-col gap-md">
+                <!-- Loaded dynamically -->
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        Auth.checkAdmin();
+        UI.renderNavbar();
+
+        function renderAnnouncements() {
+            const announcements = Storage.getAnnouncements().reverse();
+            const container = document.getElementById('announcementList');
+
+            if (announcements.length === 0) {
+                container.innerHTML = '<p class="text-secondary">No announcements found.</p>';
+            } else {
+                container.innerHTML = announcements.map(a => `
+                    <div class="card p-md flex justify-between items-center">
+                        <div>
+                            <h4>${a.title}</h4>
+                            <p class="text-secondary text-sm">${UI.formatDate(a.timestamp)}</p>
+                        </div>
+                        <button onclick="deleteAnnouncement('${a.id}')" class="btn btn-outline text-danger" style="border-color: var(--danger-color); padding: 0.25rem 0.75rem;">Delete</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        document.getElementById('announcementForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+
+            Storage.addAnnouncement({ title, content });
+            alert('Announcement published!');
+            e.target.reset();
+            renderAnnouncements();
+        });
+
+        function deleteAnnouncement(id) {
+            if (confirm('Are you sure you want to delete this announcement?')) {
+                const current = Storage.getAnnouncements();
+                const updated = current.filter(a => a.id !== id);
+                Storage.set('civic_announcements', updated);
+                renderAnnouncements();
+            }
+        }
+
+        renderAnnouncements();
+    </script>
+</body>
+
+</html>

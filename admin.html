@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - CivicFix</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    
+
+    <div class="dashboard-layout">
+        <aside class="sidebar" style="background-color: #f1f5f9;">
+            <h3 class="mb-lg" style="padding-left: 1rem;">Admin Panel</h3>
+            <ul class="sidebar-nav">
+                <li><a href="admin.html" class="sidebar-link active">Dashboard</a></li>
+                <li><a href="manage_complaints.html" class="sidebar-link">Manage Complaints</a></li>
+                <li><a href="manage_events.html" class="sidebar-link">Manage Events</a></li>
+                <li><a href="analytics.html" class="sidebar-link">Analytics</a></li>
+                <li><a href="announcements_admin.html" class="sidebar-link">Announcements</a></li>
+            </ul>
+            <div class="mt-xl p-md">
+                <button onclick="Auth.logout()" class="btn btn-outline w-100 text-danger"
+                    style="border-color: var(--danger-color); color: var(--danger-color);">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-lg">
+                <h2 id="welcomeMsg">Admin Dashboard</h2>
+            </header>
+
+            <div class="grid grid-cols-3 gap-md mb-xl">
+                <div class="card flex flex-col items-center justify-center p-lg">
+                    <h3 class="text-secondary" style="font-size: 1rem; text-transform: uppercase;">Pending Complaints
+                    </h3>
+                    <p id="pendingCount" style="font-size: 3rem; font-weight: 800; color: var(--danger-color);">0</p>
+                </div>
+                <div class="card flex flex-col items-center justify-center p-lg">
+                    <h3 class="text-secondary" style="font-size: 1rem; text-transform: uppercase;">Resolved</h3>
+                    <p id="resolvedCount" style="font-size: 3rem; font-weight: 800; color: var(--accent-color);">0</p>
+                </div>
+                <div class="card flex flex-col items-center justify-center p-lg">
+                    <h3 class="text-secondary" style="font-size: 1rem; text-transform: uppercase;">Total Users</h3>
+                    <p id="userCount" style="font-size: 3rem; font-weight: 800; color: var(--primary-color);">0</p>
+                </div>
+            </div>
+
+            <section>
+                <div class="flex justify-between items-center mb-md">
+                    <h3>Recent Complaints</h3>
+                    <a href="manage_complaints.html" class="btn btn-outline btn-sm">View All</a>
+                </div>
+                <div id="recentComplaints" class="flex flex-col gap-sm">
+                    <!-- Loaded dynamically -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        Auth.checkAdmin();
+        UI.renderNavbar();
+
+        // Load stats
+        const complaints = Storage.getComplaints();
+        const pending = complaints.filter(c => c.status === 'Pending').length;
+        const resolved = complaints.filter(c => c.status === 'Resolved').length;
+        const users = Storage.getUsers().length;
+
+        document.getElementById('pendingCount').textContent = pending;
+        document.getElementById('resolvedCount').textContent = resolved;
+        document.getElementById('userCount').textContent = users;
+
+        // Load recent activity
+        const recent = complaints.slice(-5).reverse();
+        const container = document.getElementById('recentComplaints');
+
+        if (recent.length > 0) {
+            container.innerHTML = recent.map(c => `
+                <div class="card p-sm flex justify-between items-center">
+                    <div>
+                        <h4 style="font-size: 1.1rem;">${c.category} - <span class="text-secondary text-sm">${c.location}</span></h4>
+                        <span class="text-secondary" style="font-size: 0.9rem;">Submitted by ${c.userName} on ${UI.formatDate(c.timestamp)}</span>
+                    </div>
+                    <span class="badge ${c.status === 'Resolved' ? 'text-success' : 'text-danger'}" style="font-weight: 600;">
+                        ${c.status}
+                    </span>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p class="text-secondary">No complaints found.</p>';
+        }
+    </script>
+</body>
+
+</html>

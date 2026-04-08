@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Complaints - CivicFix Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar" style="background-color: #f1f5f9;">
+            <h3 class="mb-lg" style="padding-left: 1rem;">Admin Panel</h3>
+            <ul class="sidebar-nav">
+                <li><a href="admin.html" class="sidebar-link">Dashboard</a></li>
+                <li><a href="manage_complaints.html" class="sidebar-link active">Manage Complaints</a></li>
+                <li><a href="analytics.html" class="sidebar-link">Analytics</a></li>
+                <li><a href="announcements_admin.html" class="sidebar-link">Announcements</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-lg">
+                <h2>Complaint Management</h2>
+                <div class="flex gap-sm">
+                    <select id="filterStatus" class="input-control" style="width: auto;">
+                        <option value="all">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+            </header>
+
+            <div id="complaintsList" class="flex flex-col gap-md">
+                <!-- Loaded dynamically -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Status Update Modal (Simple prompt implementation for now) -->
+
+    <script src="script.js"></script>
+    <script>
+        Auth.checkAdmin();
+        UI.renderNavbar();
+
+        const container = document.getElementById('complaintsList');
+        const filterSelect = document.getElementById('filterStatus');
+
+        function renderComplaints() {
+            const filter = filterSelect.value;
+            let complaints = Storage.getComplaints().reverse();
+
+            if (filter !== 'all') {
+                complaints = complaints.filter(c => c.status === filter);
+            }
+
+            if (complaints.length === 0) {
+                container.innerHTML = '<p class="text-secondary">No complaints found matching criteria.</p>';
+                return;
+            }
+
+            container.innerHTML = complaints.map(c => `
+                <div class="card">
+                    <div class="flex justify-between items-start mb-md">
+                        <div>
+                            <div class="flex items-center gap-sm">
+                                <h3 style="font-size: 1.25rem;">${c.category}</h3>
+                                <span class="badge" 
+                                      style="background: #e2e8f0; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">
+                                    ${c.id}
+                                </span>
+                            </div>
+                            <p class="text-secondary mt-xs">
+                                👤 <strong>${c.userName}</strong> (${c.userEmail}) <br>
+                                📍 ${c.location} &bull; ${UI.formatDate(c.timestamp)}
+                            </p>
+                        </div>
+                        <span class="badge" 
+                              style="background: ${getStatusColor(c.status).bg}; 
+                                     color: ${getStatusColor(c.status).text};
+                                     padding: 0.25rem 0.75rem; border-radius: 99px; font-weight: 600;">
+                            ${c.status}
+                        </span>
+                    </div>
+                    
+                    <p class="mb-md p-sm" style="background-color: #f8fafc; border-radius: var(--radius-sm); border-left: 3px solid var(--border-color);">
+                        ${c.description}
+                    </p>
+                    
+                    ${c.imageName ? `<p class="text-secondary text-sm mb-md">📎 Attached: ${c.imageName}</p>` : ''}
+                    
+                    ${c.remarks ? `
+                        <p class="mb-md text-sm"><strong>Previous Remarks:</strong> ${c.remarks}</p>
+                    ` : ''}
+
+                    <div class="flex gap-sm mt-md pt-sm border-t" style="border-top: 1px solid var(--border-color);">
+                        <select id="status-${c.id}" class="input-control" style="width: auto; padding: 0.4rem;">
+                            <option value="Pending" ${c.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                            <option value="In Progress" ${c.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="Resolved" ${c.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                            <option value="Rejected" ${c.status === 'Rejected' ? 'selected' : ''}>Rejected</option>
+                        </select>
+                        <input type="text" id="remark-${c.id}" class="input-control" placeholder="Add administrative remarks..." style="flex: 1; padding: 0.4rem;">
+                        <button onclick="updateStatus('${c.id}')" class="btn btn-primary" style="padding: 0.4rem 1rem;">Update</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getStatusColor(status) {
+            switch (status) {
+                case 'Pending': return { bg: '#fff1f2', text: '#9e1c23' };
+                case 'In Progress': return { bg: '#fff7ed', text: '#9a3412' };
+                case 'Resolved': return { bg: '#f0fdf4', text: '#15803d' };
+                default: return { bg: '#f1f5f9', text: '#475569' };
+            }
+        }
+
+        function updateStatus(id) {
+            const status = document.getElementById(`status-${id}`).value;
+            const remarks = document.getElementById(`remark-${id}`).value;
+
+            Storage.updateComplaint(id, { status, remarks: remarks || undefined });
+            alert(`Complaint updated to ${status}`);
+            renderComplaints();
+        }
+
+        filterSelect.addEventListener('change', renderComplaints);
+
+        // Initial Render
+        renderComplaints();
+    </script>
+</body>
+
+</html>

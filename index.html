@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicFix - Your Voice, Our City</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+   
+
+    <header class="hero">
+        <div class="container">
+            <h1>Building a Better City, Together</h1>
+            <p>Report issues, track progress, and stay informed. Join thousands of citizens making our municipality a better place to live.</p>
+            <div class="flex gap-sm justify-center">
+                <a href="register.html" class="btn btn-primary" style="background-color: var(--accent-color); color: var(--primary-color);">Get Started</a>
+                <a href="#services" class="btn btn-outline" style="color: white; border-color: white;">Learn More</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mt-xl" id="services">
+        <section class="mb-xl">
+            <h2 class="text-center mb-lg">Our Services</h2>
+            <div class="grid grid-cols-3 gap-md">
+                <div class="card text-center">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📢</div>
+                    <h3>Report Issues</h3>
+                    <p class="text-secondary mt-sm">Spot a pothole or broken streetlight? Snap a photo and report it instantly. We'll track it until it's fixed.</p>
+                </div>
+                <div class="card text-center">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔔</div>
+                    <h3>Stay Informed</h3>
+                    <p class="text-secondary mt-sm">Get real-time alerts about road closures, weather warnings, and community events directly from the municipality.</p>
+                </div>
+                <div class="card text-center">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🤝</div>
+                    <h3>Volunteer</h3>
+                    <p class="text-secondary mt-sm">Join hands with neighbors for community cleanups, events, and other civic activities.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-xl">
+            <div class="card flex flex-col items-center text-center p-xl" style="background: linear-gradient(to right, #f8fafc, #eff6ff);">
+                <h2>Admin Login</h2>
+                <p class="mt-sm mb-md" style="max-width: 500px;">Are you a municipal administrator? Log in to manage complaints, post announcements, and view analytics.</p>
+                <a href="login.html" class="btn btn-outline">Admin Portal</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container footer-content">
+            <p>&copy; 2024 CivicFix Municipality Platform. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        
+        UI.renderNavbar();
+    </script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback - CivicFix</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navbar injected by script.js -->
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <h3 class="mb-lg" style="padding-left: 1rem;">Menu</h3>
+            <ul class="sidebar-nav">
+                <li><a href="citizen.html" class="sidebar-link">Dashboard</a></li>
+                <li><a href="submit_complaint.html" class="sidebar-link">Submit Complaint</a></li>
+                <li><a href="my_complaints.html" class="sidebar-link">My Complaints</a></li>
+                <li><a href="public_complaints.html" class="sidebar-link">Public Complaints</a></li>
+                <li><a href="announcements.html" class="sidebar-link">Announcements</a></li>
+                <li><a href="feedback.html" class="sidebar-link active">Feedback</a></li>
+                <li><a href="volunteer.html" class="sidebar-link">Volunteer</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <h2 class="mb-lg">Service Feedback</h2>
+
+            <div class="card mb-lg" id="feedbackFormCard" style="max-width: 600px;">
+                <h3 class="mb-md">Rate Resolution Quality</h3>
+                <p class="text-secondary mb-md">We value your opinion. Please rate how well we handled your complaint.
+                </p>
+
+                <form id="feedbackForm">
+                    <div class="input-group">
+                        <label for="complaintId">Select Resolved Complaint</label>
+                        <select id="complaintId" class="input-control" required>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Rating</label>
+                        <div class="flex gap-md" style="font-size: 1.5rem;">
+                            <label><input type="radio" name="rating" value="1" required> ⭐</label>
+                            <label><input type="radio" name="rating" value="2"> ⭐⭐</label>
+                            <label><input type="radio" name="rating" value="3"> ⭐⭐⭐</label>
+                            <label><input type="radio" name="rating" value="4"> ⭐⭐⭐⭐</label>
+                            <label><input type="radio" name="rating" value="5"> ⭐⭐⭐⭐⭐</label>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="comments">Comments</label>
+                        <textarea id="comments" class="input-control" rows="3"
+                            placeholder="Any additional comments?"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Submit Feedback</button>
+                </form>
+            </div>
+
+            <h3 class="mb-md">Your Feedback History</h3>
+            <div id="historyList" class="flex flex-col gap-sm">
+                <!-- Loaded dynamically -->
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const user = Auth.check();
+        UI.renderNavbar();
+
+        // Populate complaints dropdown
+        const resolvedComplaints = Storage.getComplaints().filter(c => c.userEmail === user.email && c.status === 'Resolved');
+        const select = document.getElementById('complaintId');
+
+        // Check for ID in URLqueryParams
+        const urlParams = new URLSearchParams(window.location.search);
+        const preSelectedId = urlParams.get('id');
+
+        if (resolvedComplaints.length === 0) {
+            select.innerHTML = '<option value="">No resolved complaints found</option>';
+            select.disabled = true;
+        } else {
+            select.innerHTML = '<option value="">Select a complaint</option>' +
+                resolvedComplaints.map(c => `
+                    <option value="${c.id}" ${preSelectedId === c.id ? 'selected' : ''}>
+                        ${c.category} - ${UI.formatDate(c.timestamp)}
+                    </option>
+                `).join('');
+        }
+
+        // Handle submission
+        document.getElementById('feedbackForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (select.disabled) return;
+
+            const complaintId = select.value;
+            const rating = document.querySelector('input[name="rating"]:checked').value;
+            const comments = document.getElementById('comments').value;
+
+            const feedback = {
+                userEmail: user.email,
+                complaintId,
+                rating,
+                comments,
+                timestamp: new Date().toISOString()
+            };
+
+            const allFeedback = Storage.get('civic_feedback');
+            allFeedback.push(feedback);
+            Storage.set('civic_feedback', allFeedback);
+
+            alert('Thank you for your feedback!');
+            window.location.href = 'feedback.html';
+        });
+
+        // Load History
+        const history = Storage.get('civic_feedback').filter(f => f.userEmail === user.email).reverse();
+        const historyContainer = document.getElementById('historyList');
+
+        if (history.length === 0) {
+            historyContainer.innerHTML = '<p class="text-secondary">No feedback submitted yet.</p>';
+        } else {
+            historyContainer.innerHTML = history.map(f => `
+                <div class="card p-md">
+                    <div class="flex justify-between">
+                        <strong>Complaint ID: ${f.complaintId.substring(0, 8)}...</strong>
+                        <span>${'⭐'.repeat(f.rating)}</span>
+                    </div>
+                    <p class="mt-sm">${f.comments}</p>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+
+</html>
