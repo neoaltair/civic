@@ -1,171 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Submit Complaint - CivicFix</title>
+    <title>Submit Complaint — CivicFix</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
-
 <body>
-    <!-- Navbar injected by script.js -->
+    <script src="script.js"></script>
 
     <div class="dashboard-layout">
-        <aside class="sidebar">
-            <h3 class="mb-lg" style="padding-left: 1rem;">Menu</h3>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-title">My Account</div>
             <ul class="sidebar-nav">
-                <li><a href="citizen.html" class="sidebar-link">Dashboard</a></li>
-                <li><a href="submit_complaint.html" class="sidebar-link active">Submit Complaint</a></li>
-                <li><a href="my_complaints.html" class="sidebar-link">My Complaints</a></li>
-                <li><a href="public_complaints.html" class="sidebar-link">Public Complaints</a></li>
-                <li><a href="announcements.html" class="sidebar-link">Announcements</a></li>
-                <li><a href="feedback.html" class="sidebar-link">Feedback</a></li>
-                <li><a href="volunteer.html" class="sidebar-link">Volunteer</a></li>
+                <li><a href="citizen.html" class="sidebar-link">📊 Dashboard</a></li>
+                <li><a href="submit_complaint.html" class="sidebar-link active">➕ Submit Complaint</a></li>
+                <li><a href="my_complaints.html" class="sidebar-link">📋 My Complaints</a></li>
+                <li><a href="public_complaints.html" class="sidebar-link">🌍 Public Feed</a></li>
+                <li><a href="map.html" class="sidebar-link">🗺️ Community Map</a></li>
+                <li><a href="announcements.html" class="sidebar-link">📢 Announcements</a></li>
+                <li><a href="volunteer.html" class="sidebar-link">🤝 Volunteer</a></li>
+                <li><a href="feedback.html" class="sidebar-link">⭐ Feedback</a></li>
             </ul>
+            <div class="sidebar-footer">
+                <a href="profile.html" class="sidebar-link">👤 Profile</a>
+                <a href="#" onclick="Auth.logout()" class="sidebar-link" style="color:var(--danger)">🚪 Logout</a>
+            </div>
         </aside>
 
         <main class="main-content">
-            <h2 class="mb-lg">Report an Issue</h2>
+            <div class="page-header">
+                <div>
+                    <h2>➕ Submit Complaint</h2>
+                    <p class="text-secondary">Report a civic issue in your area</p>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="sidebarToggle">☰</button>
+            </div>
 
-            <div class="card" style="max-width: 800px;">
-                <form id="complaintForm">
+            <div class="card">
+                <form id="complaintForm" enctype="multipart/form-data">
                     <div class="grid grid-cols-2 gap-md">
                         <div class="input-group">
-                            <label for="category">Issue Category</label>
+                            <label for="category">Category</label>
                             <select id="category" class="input-control" required>
-                                <option value="">Select Category</option>
-                                <option value="Roads & Potholes">Roads & Potholes</option>
-                                <option value="Garbage Collection">Garbage Collection</option>
-                                <option value="Street Lighting">Street Lighting</option>
-                                <option value="Water Supply">Water Supply</option>
-                                <option value="Noise Pollution">Noise Pollution</option>
-                                <option value="Other">Other</option>
+                                <option value="">Select category…</option>
+                                <option>Roads & Potholes</option>
+                                <option>Garbage Collection</option>
+                                <option>Street Lighting</option>
+                                <option>Water Supply</option>
+                                <option>Sewage & Drainage</option>
+                                <option>Public Property</option>
+                                <option>Noise Complaint</option>
+                                <option>Other</option>
                             </select>
                         </div>
-
                         <div class="input-group">
-                            <label for="location">Location (Address/Landmark)</label>
-                            <input type="text" id="location" class="input-control" required
-                                placeholder="e.g., Main St & 5th Ave">
+                            <label for="location">Location / Area</label>
+                            <input type="text" id="location" class="input-control" placeholder="e.g. Anna Nagar, Chennai" required>
                         </div>
                     </div>
 
                     <div class="input-group">
                         <label for="description">Description</label>
-                        <textarea id="description" class="input-control" rows="5" required
-                            placeholder="Describe the issue in detail..."></textarea>
-                    </div>
-
-                    <!-- Map Widget -->
-                    <div class="input-group">
-                        <label>Pin Location on Map</label>
-                        <div id="map"
-                            style="height: 300px; border-radius: var(--radius-md); z-index: 1; border: 1px solid var(--border-color);">
-                        </div>
-                        <input type="hidden" id="lat">
-                        <input type="hidden" id="lng">
-                        <p class="text-secondary mt-xs" style="font-size: 0.8rem;" id="location-status">Click on the map
-                            to pin the precise location.</p>
+                        <textarea id="description" class="input-control" rows="4" placeholder="Describe the issue in detail…" required></textarea>
                     </div>
 
                     <div class="input-group">
-                        <label for="image">Upload Image (Optional)</label>
+                        <label for="image">Attach Photo (optional)</label>
                         <input type="file" id="image" class="input-control" accept="image/*">
+                        <img id="imagePreview" class="image-preview hidden" alt="Preview">
                     </div>
 
                     <div class="input-group">
                         <label>
-                            <input type="checkbox" id="isPublic" checked> Make this complaint public?
+                            <input type="checkbox" id="isPublic" checked style="accent-color:var(--accent);margin-right:.5rem;">
+                            Make this complaint public (visible to community)
                         </label>
-                        <p class="text-secondary" style="font-size: 0.8rem;">Public complaints can be viewed and upvoted
-                            by other citizens.</p>
                     </div>
 
-                    <button type="submit" class="btn btn-primary">Submit Complaint</button>
-                    <a href="citizen.html" class="btn btn-outline ml-sm">Cancel</a>
+                    <!-- Map -->
+                    <div class="input-group">
+                        <label>Pin Location on Map <span class="text-muted text-sm">(optional — click to set)</span></label>
+                        <div id="map" style="height:300px;border-radius:var(--r-md);border:1px solid var(--border);"></div>
+                        <p id="location-status" class="text-secondary text-sm mt-xs">No pin placed yet</p>
+                        <input type="hidden" id="lat">
+                        <input type="hidden" id="lng">
+                    </div>
+
+                    <div id="submitMsg"></div>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">🚀 Submit Complaint</button>
                 </form>
             </div>
         </main>
     </div>
 
-    <script src="script.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const user = Auth.check();
         UI.renderNavbar();
 
-        // Initialize Map
-        const map = L.map('map').setView([13.0827, 80.2707], 13); // Default Chennai
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        // Image preview
+        document.getElementById('image').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const preview = document.getElementById('imagePreview');
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+            }
+        });
+
+        // Map
+        const map = L.map('map').setView([13.0827, 80.2707], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap © CartoDB',
+            subdomains: 'abcd',
+            maxZoom: 20
         }).addTo(map);
 
         let marker;
-
-        // Try to get user location
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(position => {
-                const { latitude, longitude } = position.coords;
-                map.setView([latitude, longitude], 15);
-            }, () => {
-                console.log('Location access denied or error');
+            navigator.geolocation.getCurrentPosition(pos => {
+                map.setView([pos.coords.latitude, pos.coords.longitude], 15);
             });
         }
 
-        map.on('click', function (e) {
+        map.on('click', (e) => {
             const { lat, lng } = e.latlng;
-
-            if (marker) {
-                marker.setLatLng(e.latlng);
-            } else {
-                marker = L.marker(e.latlng).addTo(map);
-            }
-
+            if (marker) { marker.setLatLng(e.latlng); }
+            else { marker = L.marker(e.latlng).addTo(map); }
             document.getElementById('lat').value = lat;
             document.getElementById('lng').value = lng;
-            document.getElementById('location-status').textContent = `Selected Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            document.getElementById('location-status').textContent =
+                `📍 Pinned: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
         });
 
+        // Submit
         document.getElementById('complaintForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const msgEl = document.getElementById('submitMsg');
+            btn.textContent = 'Submitting…';
+            btn.disabled = true;
 
-            const category = document.getElementById('category').value;
-            const location = document.getElementById('location').value;
-            const description = document.getElementById('description').value;
-            const isPublic = document.getElementById('isPublic').checked;
+            const fd = new FormData();
+            fd.append('category',    document.getElementById('category').value);
+            fd.append('location',    document.getElementById('location').value);
+            fd.append('description', document.getElementById('description').value);
+            fd.append('isPublic',    document.getElementById('isPublic').checked ? 'true' : 'false');
             const lat = document.getElementById('lat').value;
             const lng = document.getElementById('lng').value;
-
-            const imageInput = document.getElementById('image');
-            const hasImage = imageInput.files.length > 0;
-            const imageName = hasImage ? imageInput.files[0].name : null;
-
-            const complaint = {
-                category,
-                location,
-                description,
-                imageName,
-                isPublic,
-                coordinates: (lat && lng) ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null,
-            };
+            if (lat) fd.append('lat', lat);
+            if (lng) fd.append('lng', lng);
+            const imageFile = document.getElementById('image').files[0];
+            if (imageFile) fd.append('image', imageFile);
 
             try {
-                await Storage.addComplaint(complaint);
-                alert('Complaint submitted successfully!');
-                window.location.href = 'my_complaints.html';
+                await Storage.addComplaint(fd);
+                msgEl.innerHTML = '<div class="msg-box msg-success">✓ Complaint submitted!</div>';
+                setTimeout(() => window.location.href = 'my_complaints.html', 1200);
             } catch (err) {
-                alert('Failed to submit complaint. Please try again.');
+                msgEl.innerHTML = `<div class="msg-box msg-error">✗ ${err.message}</div>`;
+                btn.textContent = '🚀 Submit Complaint';
+                btn.disabled = false;
             }
         });
     </script>
 </body>
-
 </html>

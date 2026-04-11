@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile — CivicFix</title>
+    <meta name="description" content="View and edit your CivicFix profile.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <script src="script.js"></script>
+
+    <div class="dashboard-layout">
+        <div id="sidebarContainer"></div>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h2>👤 My Profile</h2>
+                <button class="btn btn-ghost btn-sm" id="sidebarToggle">☰ Menu</button>
+            </div>
+
+            <!-- Profile header -->
+            <div id="profileSection" class="card mb-md">
+                <p class="text-secondary">Loading profile…</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-3 gap-md mb-md" id="statsSection"></div>
+
+            <!-- Recent activity -->
+            <div class="card mb-md" id="activitySection" style="display:none;">
+                <h3 class="mb-md">Recent Complaints</h3>
+                <div id="activityList"></div>
+            </div>
+
+            <!-- Edit form -->
+            <div class="card">
+                <h3 class="mb-md">Edit Profile</h3>
+                <div id="editMsg"></div>
+                <form id="editForm">
+                    <div class="input-group">
+                        <label for="editName">Display Name</label>
+                        <input type="text" id="editName" class="input-control" placeholder="Enter new name">
+                    </div>
+                    <div class="input-group">
+                        <label for="editPassword">New Password</label>
+                        <input type="password" id="editPassword" class="input-control" placeholder="Leave blank to keep current">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const user = Auth.check();
+        UI.renderNavbar();
+
+        // Build sidebar
+        const sidebarContainer = document.getElementById('sidebarContainer');
+        if (user.role === 'admin') {
+            sidebarContainer.innerHTML = `
+                <aside class="sidebar" id="sidebar">
+                    <div class="sidebar-title">Admin Panel</div>
+                    <ul class="sidebar-nav">
+                        <li><a href="admin.html" class="sidebar-link">📊 Dashboard</a></li>
+                        <li><a href="manage_complaints.html" class="sidebar-link">📋 Complaints</a></li>
+                        <li><a href="map.html" class="sidebar-link">🗺️ Community Map</a></li>
+                        <li><a href="analytics.html" class="sidebar-link">📈 Analytics</a></li>
+                        <li><a href="announcements_admin.html" class="sidebar-link">📢 Announcements</a></li>
+                        <li><a href="manage_events.html" class="sidebar-link">📅 Events</a></li>
+                    </ul>
+                    <div class="sidebar-footer">
+                        <a href="profile.html" class="sidebar-link active">👤 Profile</a>
+                        <a href="#" onclick="Auth.logout()" class="sidebar-link" style="color:var(--danger)">🚪 Logout</a>
+                    </div>
+                </aside>`;
+        } else {
+            sidebarContainer.innerHTML = `
+                <aside class="sidebar" id="sidebar">
+                    <div class="sidebar-title">My Account</div>
+                    <ul class="sidebar-nav">
+                        <li><a href="citizen.html" class="sidebar-link">📊 Dashboard</a></li>
+                        <li><a href="submit_complaint.html" class="sidebar-link">➕ Submit Complaint</a></li>
+                        <li><a href="my_complaints.html" class="sidebar-link">📋 My Complaints</a></li>
+                        <li><a href="public_complaints.html" class="sidebar-link">🌍 Public Feed</a></li>
+                        <li><a href="map.html" class="sidebar-link">🗺️ Community Map</a></li>
+                        <li><a href="announcements.html" class="sidebar-link">📢 Announcements</a></li>
+                        <li><a href="volunteer.html" class="sidebar-link">🤝 Volunteer</a></li>
+                        <li><a href="feedback.html" class="sidebar-link">⭐ Feedback</a></li>
+                    </ul>
+                    <div class="sidebar-footer">
+                        <a href="profile.html" class="sidebar-link active">👤 Profile</a>
+                        <a href="#" onclick="Auth.logout()" class="sidebar-link" style="color:var(--danger)">🚪 Logout</a>
+                    </div>
+                </aside>`;
+        }
+
+        async function init() {
+            const profile = await Storage.getProfile();
+            if (!profile) return;
+
+            const initial = profile.name.charAt(0).toUpperCase();
+            const pending = profile.totalComplaints - profile.resolvedComplaints;
+
+            document.getElementById('profileSection').innerHTML = `
+                <div class="profile-header">
+                    <div class="profile-avatar">${initial}</div>
+                    <div>
+                        <div class="profile-name">${profile.name}</div>
+                        <div class="profile-email">${profile.email}</div>
+                        <div style="margin-top:.5rem;display:flex;gap:.5rem;">
+                            <span class="badge ${profile.role === 'admin' ? 'badge-admin' : 'badge-citizen'}">${profile.role}</span>
+                            <span class="badge" style="background:var(--surface-3);color:var(--text-muted);">Member since ${UI.formatDate(profile.createdAt)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('editName').value = profile.name;
+
+            // Stats
+            if (profile.role === 'citizen') {
+                document.getElementById('statsSection').innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-label">Total Submitted</div>
+                        <div class="stat-number" style="color:var(--info)">${profile.totalComplaints}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Resolved</div>
+                        <div class="stat-number" style="color:var(--success)">${profile.resolvedComplaints}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Pending / Active</div>
+                        <div class="stat-number" style="color:var(--danger)">${pending}</div>
+                    </div>
+                `;
+
+                // Recent complaints
+                const complaints = (await Storage.getComplaints()).slice().reverse().slice(0, 5);
+                const actSection = document.getElementById('activitySection');
+                actSection.style.display = 'block';
+                document.getElementById('activityList').innerHTML = complaints.length === 0
+                    ? '<p class="text-secondary">No complaints yet.</p>'
+                    : complaints.map(c => `
+                        <a href="complaint_details.html?id=${c.id}" style="text-decoration:none;">
+                            <div class="card ${UI.statusCardClass(c.status)} mb-sm" style="padding:var(--sm);">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <strong>${c.category}</strong>
+                                        <p class="text-sm text-secondary mt-xs">📍 ${c.location} · ${UI.formatDate(c.timestamp)}</p>
+                                    </div>
+                                    ${UI.statusBadge(c.status)}
+                                </div>
+                            </div>
+                        </a>
+                    `).join('');
+            } else {
+                // Admin: platform stats
+                const stats = await Storage.getAdminStats();
+                document.getElementById('statsSection').innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-label">Total Complaints</div>
+                        <div class="stat-number" style="color:var(--info)">${stats.totalComplaints}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Resolved</div>
+                        <div class="stat-number" style="color:var(--success)">${stats.resolved}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Registered Users</div>
+                        <div class="stat-number" style="color:var(--accent)">${stats.totalUsers}</div>
+                    </div>
+                `;
+            }
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('editName').value.trim();
+            const password = document.getElementById('editPassword').value;
+            const msgEl = document.getElementById('editMsg');
+
+            const payload = {};
+            if (name)     payload.name     = name;
+            if (password) payload.password = password;
+
+            if (!payload.name && !payload.password) {
+                msgEl.innerHTML = '<div class="msg-box msg-info">No changes provided.</div>';
+                return;
+            }
+
+            try {
+                const updated = await Storage.updateProfile(payload);
+                // Update local session name
+                const session = Storage.getSession();
+                session.name = updated.name;
+                Storage.setSession(session);
+                msgEl.innerHTML = '<div class="msg-box msg-success">✓ Profile updated successfully!</div>';
+                document.getElementById('editPassword').value = '';
+                init(); // refresh
+            } catch (err) {
+                msgEl.innerHTML = '<div class="msg-box msg-error">✗ ' + err.message + '</div>';
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 /**
- * CivicFix - Shared Logic (API-backed)
+ * CivicFix — Shared Logic (API-backed, Dark Theme)
  * Auth reads localStorage synchronously.
- * Storage methods are all async and hit http://localhost:8000
+ * Storage methods are async and hit http://localhost:8000
  */
 
 const API_BASE = 'http://localhost:8000';
@@ -10,7 +10,9 @@ const API_BASE = 'http://localhost:8000';
 
 async function apiFetch(path, options = {}) {
     const session = JSON.parse(localStorage.getItem('civic_session'));
-    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    const isFormData = options.body instanceof FormData;
+    const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
+    if (options.headers) Object.assign(headers, options.headers);
     if (session && session.token) {
         headers['Authorization'] = `Bearer ${session.token}`;
     }
@@ -29,19 +31,13 @@ const Auth = {
     // SYNCHRONOUS — reads localStorage directly
     check: () => {
         const session = JSON.parse(localStorage.getItem('civic_session'));
-        if (!session) {
-            window.location.href = 'login.html';
-            return null;
-        }
+        if (!session) { window.location.href = 'login.html'; return null; }
         return session;
     },
 
     checkAdmin: () => {
         const session = JSON.parse(localStorage.getItem('civic_session'));
-        if (!session) {
-            window.location.href = 'login.html';
-            return null;
-        }
+        if (!session) { window.location.href = 'login.html'; return null; }
         if (session.role !== 'admin') {
             alert('Access Denied');
             window.location.href = 'citizen.html';
@@ -122,12 +118,13 @@ const Storage = {
         return await res.json();
     },
 
-    addComplaint: async (data) => {
-        const res = await apiFetch('/complaints', {
-            method: 'POST',
-            body: JSON.stringify(data),
-        });
-        if (!res || !res.ok) throw new Error('Failed to submit complaint');
+    // Accepts FormData for multipart upload
+    addComplaint: async (formData) => {
+        const res = await apiFetch('/complaints', { method: 'POST', body: formData });
+        if (!res || !res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || 'Failed to submit complaint');
+        }
         return await res.json();
     },
 
@@ -143,6 +140,23 @@ const Storage = {
     upvoteComplaint: async (id) => {
         const res = await apiFetch(`/complaints/${id}/upvote`, { method: 'POST' });
         if (!res || !res.ok) throw new Error('Failed to upvote');
+        return await res.json();
+    },
+
+    // ── Comments ─────────────────────────────────────────────────────────────
+
+    getComments: async (complaintId) => {
+        const res = await apiFetch(`/complaints/${complaintId}/comments`);
+        if (!res || !res.ok) return [];
+        return await res.json();
+    },
+
+    addComment: async (complaintId, text) => {
+        const res = await apiFetch(`/complaints/${complaintId}/comments`, {
+            method: 'POST',
+            body: JSON.stringify({ text }),
+        });
+        if (!res || !res.ok) throw new Error('Failed to post comment');
         return await res.json();
     },
 
@@ -177,10 +191,7 @@ const Storage = {
     },
 
     addEvent: async (data) => {
-        const res = await apiFetch('/events', {
-            method: 'POST',
-            body: JSON.stringify(data),
-        });
+        const res = await apiFetch('/events', { method: 'POST', body: JSON.stringify(data) });
         if (!res || !res.ok) throw new Error('Failed to create event');
         return await res.json();
     },
@@ -210,7 +221,24 @@ const Storage = {
         return await res.json();
     },
 
-    // ── Feedback (localStorage only — no backend endpoint) ─────────────────
+    // ── User Profile ─────────────────────────────────────────────────────────
+
+    getProfile: async () => {
+        const res = await apiFetch('/users/me/profile');
+        if (!res || !res.ok) return null;
+        return await res.json();
+    },
+
+    updateProfile: async (data) => {
+        const res = await apiFetch('/users/me/profile', {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+        if (!res || !res.ok) throw new Error('Failed to update profile');
+        return await res.json();
+    },
+
+    // ── Feedback (localStorage only) ─────────────────────────────────────────
     get: (key) => JSON.parse(localStorage.getItem(key)) || [],
     set: (key, value) => localStorage.setItem(key, JSON.stringify(value)),
 };
@@ -224,26 +252,52 @@ const UI = {
         });
     },
 
+    formatDateTime: (isoString) => {
+        return new Date(isoString).toLocaleString('en-US', {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+    },
+
+    statusBadge: (status) => {
+        const map = {
+            'Pending':     'badge-pending',
+            'In Progress': 'badge-progress',
+            'Resolved':    'badge-resolved',
+            'Rejected':    'badge-rejected',
+        };
+        const cls = map[status] || 'badge-rejected';
+        return `<span class="badge ${cls}">${status}</span>`;
+    },
+
+    statusCardClass: (status) => {
+        if (status === 'Resolved')    return 'status-resolved';
+        if (status === 'In Progress') return 'status-progress';
+        return 'status-pending';
+    },
+
     renderNavbar: () => {
         const session = Storage.getSession();
         const nav = document.createElement('nav');
         nav.className = 'navbar';
+        nav.id = 'mainNavbar';
 
         let links = '';
         if (!session) {
             links = `
                 <li><a href="index.html" class="nav-link">Home</a></li>
                 <li><a href="login.html" class="nav-link">Login</a></li>
-                <li><a href="register.html" class="btn btn-primary">Register</a></li>
+                <li><a href="register.html" class="btn btn-primary btn-sm">Register</a></li>
             `;
         } else if (session.role === 'citizen') {
             links = `
                 <li><a href="citizen.html" class="nav-link">Dashboard</a></li>
+                <li><a href="profile.html" class="nav-link">👤 ${session.name.split(' ')[0]}</a></li>
                 <li><a href="#" onclick="Auth.logout()" class="nav-link">Logout</a></li>
             `;
         } else if (session.role === 'admin') {
             links = `
                 <li><a href="admin.html" class="nav-link">Dashboard</a></li>
+                <li><a href="profile.html" class="nav-link">👤 ${session.name.split(' ')[0]}</a></li>
                 <li><a href="#" onclick="Auth.logout()" class="nav-link">Logout</a></li>
             `;
         }
@@ -251,13 +305,34 @@ const UI = {
         nav.innerHTML = `
             <div class="container flex justify-between items-center">
                 <a href="index.html" class="nav-brand">
-                    <span>🏛️</span> CivicFix
+                    CivicFix<span class="dot">.</span>
                 </a>
-                <ul class="nav-links items-center">
+                <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
+                    <span></span><span></span><span></span>
+                </button>
+                <ul class="nav-links" id="navLinks">
                     ${links}
                 </ul>
             </div>
         `;
         document.body.prepend(nav);
-    }
+
+        // Hamburger toggle
+        document.getElementById('hamburgerBtn')?.addEventListener('click', () => {
+            document.getElementById('navLinks')?.classList.toggle('open');
+        });
+
+        // Scroll blur
+        window.addEventListener('scroll', () => {
+            nav.classList.toggle('scrolled', window.scrollY > 10);
+        });
+
+        // Sidebar hamburger for dashboard
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => {
+                document.querySelector('.sidebar')?.classList.toggle('open');
+            });
+        }
+    },
 };

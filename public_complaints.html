@@ -1,78 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Public Complaints - CivicFix</title>
+    <title>Public Feed — CivicFix</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-
 <body>
-    <!-- Navbar injected by script.js -->
+    <script src="script.js"></script>
 
     <div class="dashboard-layout">
-        <aside class="sidebar">
-            <h3 class="mb-lg" style="padding-left: 1rem;">Menu</h3>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-title">My Account</div>
             <ul class="sidebar-nav">
-                <li><a href="citizen.html" class="sidebar-link">Dashboard</a></li>
-                <li><a href="submit_complaint.html" class="sidebar-link">Submit Complaint</a></li>
-                <li><a href="my_complaints.html" class="sidebar-link">My Complaints</a></li>
-                <li><a href="public_complaints.html" class="sidebar-link active">Public Complaints</a></li>
-                <li><a href="announcements.html" class="sidebar-link">Announcements</a></li>
-                <li><a href="feedback.html" class="sidebar-link">Feedback</a></li>
-                <li><a href="volunteer.html" class="sidebar-link">Volunteer</a></li>
+                <li><a href="citizen.html" class="sidebar-link">📊 Dashboard</a></li>
+                <li><a href="submit_complaint.html" class="sidebar-link">➕ Submit Complaint</a></li>
+                <li><a href="my_complaints.html" class="sidebar-link">📋 My Complaints</a></li>
+                <li><a href="public_complaints.html" class="sidebar-link active">🌍 Public Feed</a></li>
+                <li><a href="map.html" class="sidebar-link">🗺️ Community Map</a></li>
+                <li><a href="announcements.html" class="sidebar-link">📢 Announcements</a></li>
+                <li><a href="volunteer.html" class="sidebar-link">🤝 Volunteer</a></li>
+                <li><a href="feedback.html" class="sidebar-link">⭐ Feedback</a></li>
             </ul>
+            <div class="sidebar-footer">
+                <a href="profile.html" class="sidebar-link">👤 Profile</a>
+                <a href="#" onclick="Auth.logout()" class="sidebar-link" style="color:var(--danger)">🚪 Logout</a>
+            </div>
         </aside>
 
         <main class="main-content">
-            <h2 class="mb-lg">Community Issues</h2>
-
-            <div id="publicList" class="flex flex-col gap-md">
-                <!-- Loaded dynamically -->
+            <div class="page-header">
+                <div>
+                    <h2>🌍 Public Complaints</h2>
+                    <p class="text-secondary">Community issues — upvote to prioritize</p>
+                </div>
+                <div style="display:flex;gap:.5rem;">
+                    <a href="map.html" class="btn btn-ghost btn-sm">🗺️ Map View</a>
+                    <button class="btn btn-ghost btn-sm" id="sidebarToggle">☰</button>
+                </div>
             </div>
+
+            <div id="publicList"><p class="text-secondary">Loading…</p></div>
         </main>
     </div>
 
-    <script src="script.js"></script>
     <script>
         const user = Auth.check();
         UI.renderNavbar();
 
         async function init() {
             const complaints = (await Storage.getPublicComplaints()).reverse();
-            const container = document.getElementById('publicList');
-
-            if (complaints.length === 0) {
-                container.innerHTML = '<p class="text-secondary">No public complaints found.</p>';
-            } else {
-                renderList(complaints);
-            }
+            renderList(complaints);
         }
 
         function renderList(complaints) {
             const container = document.getElementById('publicList');
+            if (complaints.length === 0) {
+                container.innerHTML = '<p class="text-secondary">No public complaints found.</p>';
+                return;
+            }
             container.innerHTML = complaints.map(c => `
-                <div class="card" onclick="window.location.href='complaint_details.html?id=${c.id}'" style="cursor: pointer;">
-                    <div class="flex justify-between items-center mb-sm">
-                        <h3 style="font-size: 1.25rem;">${c.category}</h3>
-                        <span class="text-secondary" style="font-size: 0.875rem;">by ${c.userName}</span>
+                <div class="card ${UI.statusCardClass(c.status)} mb-sm"
+                     onclick="window.location.href='complaint_details.html?id=${c.id}'" style="cursor:pointer;">
+                    <div class="flex justify-between items-start">
+                        <div style="flex:1;min-width:0;">
+                            <div class="flex items-center gap-sm mb-xs">
+                                <h4>${c.category}</h4>
+                                ${UI.statusBadge(c.status)}
+                            </div>
+                            <p class="text-secondary text-sm">📍 ${c.location} &bull; by ${c.userName} &bull; ${UI.formatDate(c.timestamp)}</p>
+                            <p class="text-sm mt-xs" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-muted);">${c.description}</p>
+                        </div>
+                        ${c.imageUrl ? `<img src="${c.imageUrl}" style="width:60px;height:60px;object-fit:cover;border-radius:var(--r-md);margin-left:var(--sm);border:1px solid var(--border);" alt="">` : ''}
                     </div>
-                    <p class="text-secondary mb-sm">📍 ${c.location} &bull; ${UI.formatDate(c.timestamp)}</p>
-                    <p class="mb-md" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${c.description}</p>
-                    
-                    <div class="flex gap-md items-center mt-md pt-sm border-t" style="border-top: 1px solid var(--border-color);">
-                        <button class="btn ${c.upvotedBy && c.upvotedBy.includes(user.email) ? 'btn-primary' : 'btn-outline'}" 
-                                onclick="upvote('${c.id}'); event.stopPropagation();" style="padding: 0.5rem 1rem;">
+                    <div class="flex items-center gap-sm mt-sm pt-sm border-t" onclick="event.stopPropagation()">
+                        <button class="btn ${c.upvotedBy && c.upvotedBy.includes(user.email) ? 'btn-primary' : 'btn-outline'} btn-sm"
+                                onclick="upvote('${c.id}')">
                             👍 ${c.upvotedBy && c.upvotedBy.includes(user.email) ? 'Upvoted' : 'Upvote'} (${c.upvotes || 0})
                         </button>
-                        <span class="badge ${c.status.toLowerCase()}" 
-                              style="background: ${c.status === 'Resolved' ? '#def7ec' : '#fff1f2'}; 
-                                     color: ${c.status === 'Resolved' ? '#03543f' : '#9e1c23'};
-                                     padding: 0.25rem 0.75rem; border-radius: 99px; font-weight: 600; font-size: 0.875rem;">
-                            Status: ${c.status}
-                        </span>
                     </div>
                 </div>
             `).join('');
@@ -80,17 +85,15 @@
 
         async function upvote(id) {
             try {
-                const updated = await Storage.upvoteComplaint(id);
-                // Re-fetch and re-render to reflect new state
+                await Storage.upvoteComplaint(id);
                 const complaints = (await Storage.getPublicComplaints()).reverse();
                 renderList(complaints);
-            } catch (err) {
-                alert('Failed to upvote. Please try again.');
+            } catch (e) {
+                alert('Failed to upvote.');
             }
         }
 
         init();
     </script>
 </body>
-
 </html>

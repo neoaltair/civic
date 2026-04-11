@@ -1,68 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Events - CivicFix Admin</title>
+    <title>Manage Events — CivicFix</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-
 <body>
-    <!-- Navbar injected by script.js -->
+    <script src="script.js"></script>
 
     <div class="dashboard-layout">
-        <aside class="sidebar" style="background-color: #f1f5f9;">
-            <h3 class="mb-lg" style="padding-left: 1rem;">Admin Panel</h3>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-title">Admin Panel</div>
             <ul class="sidebar-nav">
-                <li><a href="admin.html" class="sidebar-link">Dashboard</a></li>
-                <li><a href="manage_complaints.html" class="sidebar-link">Manage Complaints</a></li>
-                <li><a href="manage_events.html" class="sidebar-link active">Manage Events</a></li>
-                <li><a href="analytics.html" class="sidebar-link">Analytics</a></li>
-                <li><a href="announcements_admin.html" class="sidebar-link">Announcements</a></li>
+                <li><a href="admin.html" class="sidebar-link">📊 Dashboard</a></li>
+                <li><a href="manage_complaints.html" class="sidebar-link">📋 Manage Complaints</a></li>
+                <li><a href="map.html" class="sidebar-link">🗺️ Community Map</a></li>
+                <li><a href="analytics.html" class="sidebar-link">📈 Analytics</a></li>
+                <li><a href="announcements_admin.html" class="sidebar-link">📢 Announcements</a></li>
+                <li><a href="manage_events.html" class="sidebar-link active">📅 Events</a></li>
             </ul>
+            <div class="sidebar-footer">
+                <a href="profile.html" class="sidebar-link">👤 Profile</a>
+                <a href="#" onclick="Auth.logout()" class="sidebar-link" style="color:var(--danger)">🚪 Logout</a>
+            </div>
         </aside>
 
         <main class="main-content">
-            <h2 class="mb-lg">Manage Events</h2>
+            <div class="page-header">
+                <div><h2>📅 Manage Events</h2></div>
+                <button class="btn btn-ghost btn-sm" id="sidebarToggle">☰</button>
+            </div>
 
-            <div class="card mb-xl">
-                <h3>Create New Event</h3>
-                <form id="eventForm" class="mt-md">
-                    <div class="input-group">
-                        <label for="title">Event Title</label>
-                        <input type="text" id="title" class="input-control" required
-                            placeholder="e.g. Beach Cleanup Drive">
-                    </div>
+            <!-- Create form -->
+            <div class="card mb-md">
+                <h3 class="mb-md">Create New Event</h3>
+                <div id="formMsg"></div>
+                <form id="eventForm">
                     <div class="grid grid-cols-2 gap-md">
                         <div class="input-group">
-                            <label for="date">Date & Time</label>
-                            <input type="datetime-local" id="date" class="input-control" required>
+                            <label for="title">Event Title</label>
+                            <input type="text" id="title" class="input-control" placeholder="Event name" required>
                         </div>
                         <div class="input-group">
                             <label for="location">Location</label>
-                            <input type="text" id="location" class="input-control" required
-                                placeholder="e.g. Marina Beach">
+                            <input type="text" id="location" class="input-control" placeholder="Venue or area" required>
                         </div>
                     </div>
                     <div class="input-group">
-                        <label for="description">Description</label>
-                        <textarea id="description" class="input-control" rows="3" required
-                            placeholder="Event details..."></textarea>
+                        <label for="date">Date & Time</label>
+                        <input type="datetime-local" id="date" class="input-control" required>
                     </div>
-                    <button type="submit" class="btn btn-primary">Create Event</button>
+                    <div class="input-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" class="input-control" rows="3" placeholder="Event details…" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">📅 Create Event</button>
                 </form>
             </div>
 
-            <h3 class="mb-md">Active Events</h3>
-            <div id="eventsList" class="flex flex-col gap-md">
-                <!-- Loaded dynamically -->
+            <!-- Events list -->
+            <div class="card">
+                <h3 class="mb-md">Active Events</h3>
+                <div id="eventsList"><p class="text-secondary">Loading…</p></div>
             </div>
         </main>
     </div>
 
-    <script src="script.js"></script>
     <script>
         Auth.checkAdmin();
         UI.renderNavbar();
@@ -70,54 +74,51 @@
         async function renderEvents() {
             const events = (await Storage.getEvents()).reverse();
             const container = document.getElementById('eventsList');
-
             if (events.length === 0) {
-                container.innerHTML = '<p class="text-secondary">No active events.</p>';
-            } else {
-                container.innerHTML = events.map(e => `
-                    <div class="card p-md flex justify-between items-center">
-                        <div>
-                            <h4>${e.title}</h4>
-                            <p class="text-secondary text-sm">📅 ${new Date(e.date).toLocaleString()} &bull; 📍 ${e.location}</p>
-                            <p class="mt-xs text-sm">${e.description}</p>
-                            <p class="mt-xs text-sm font-bold text-success">${e.attendees.length} Attendees</p>
-                        </div>
-                        <button onclick="deleteEvent('${e.id}')" class="btn btn-outline text-danger" style="border-color: var(--danger-color); padding: 0.25rem 0.75rem;">Delete</button>
-                    </div>
-                `).join('');
+                container.innerHTML = '<p class="text-secondary">No events created yet.</p>';
+                return;
             }
+            container.innerHTML = events.map(e => `
+                <div class="card event-card mb-sm" style="padding:var(--sm);">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <strong>${e.title}</strong>
+                            <p class="text-secondary text-sm mt-xs">📅 ${new Date(e.date).toLocaleString()} &bull; 📍 ${e.location}</p>
+                            <p class="text-sm mt-xs" style="color:var(--text-muted);">${e.description}</p>
+                            <p class="text-sm mt-xs" style="color:var(--success);">👥 ${e.attendees.length} volunteers</p>
+                        </div>
+                        <button onclick="deleteEv('${e.id}')" class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:var(--danger-dim);margin-left:var(--sm);">Delete</button>
+                    </div>
+                </div>
+            `).join('');
         }
 
         document.getElementById('eventForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const title = document.getElementById('title').value;
-            const date = document.getElementById('date').value;
-            const location = document.getElementById('location').value;
-            const description = document.getElementById('description').value;
-
+            const msg = document.getElementById('formMsg');
             try {
-                await Storage.addEvent({ title, date, location, description });
-                alert('Event created successfully!');
+                await Storage.addEvent({
+                    title: document.getElementById('title').value,
+                    date: document.getElementById('date').value,
+                    location: document.getElementById('location').value,
+                    description: document.getElementById('description').value,
+                });
+                msg.innerHTML = '<div class="msg-box msg-success">✓ Event created!</div>';
                 e.target.reset();
                 renderEvents();
-            } catch (err) {
-                alert('Failed to create event.');
+            } catch {
+                msg.innerHTML = '<div class="msg-box msg-error">✗ Failed to create event.</div>';
             }
         });
 
-        async function deleteEvent(id) {
-            if (confirm('Are you sure you want to delete this event?')) {
-                try {
-                    await Storage.deleteEvent(id);
-                    renderEvents();
-                } catch (err) {
-                    alert('Failed to delete event.');
-                }
+        async function deleteEv(id) {
+            if (confirm('Delete this event?')) {
+                try { await Storage.deleteEvent(id); renderEvents(); }
+                catch { alert('Delete failed.'); }
             }
         }
 
         renderEvents();
     </script>
 </body>
-
 </html>

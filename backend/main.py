@@ -1,15 +1,17 @@
 import os
 import uuid
 import json
+import shutil
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 
 from sqlalchemy import (
     create_engine, Column, String, Boolean, Integer, Text, DateTime
@@ -22,11 +24,14 @@ from pydantic import BaseModel
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 
-SECRET_KEY = os.getenv("SECRET_KEY", "civicfix_secret")
-ALGORITHM  = os.getenv("ALGORITHM", "HS256")
-TOKEN_EXP  = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 1440))
-
+SECRET_KEY   = os.getenv("SECRET_KEY", "civicfix_secret")
+ALGORITHM    = os.getenv("ALGORITHM", "HS256")
+TOKEN_EXP    = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 1440))
 DATABASE_URL = "sqlite:///./civic.db"
+UPLOADS_DIR  = os.path.join(os.path.dirname(__file__), "uploads")
+BASE_URL     = "http://localhost:8000"
+
+os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 # ─── DB Setup ─────────────────────────────────────────────────────────────────
 
@@ -60,9 +65,20 @@ class ComplaintModel(Base):
     lat         = Column(String, nullable=True)
     lng         = Column(String, nullable=True)
     image_name  = Column(String, nullable=True)
+    image_url   = Column(String, nullable=True)   # NEW: full URL to uploaded image
     upvotes     = Column(Integer, default=0)
-    upvoted_by  = Column(Text,   default="[]")  # JSON list of emails
+    upvoted_by  = Column(Text,   default="[]")    # JSON list of emails
     timestamp   = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class CommentModel(Base):
+    __tablename__ = "comments"
+    id           = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    complaint_id = Column(String, nullable=False, index=True)
+    user_email   = Column(String, nullable=False)
+    user_name    = Column(String, nullable=False)
+    text         = Column(Text, nullable=False)
+    timestamp    = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class AnnouncementModel(Base):
@@ -79,7 +95,7 @@ class EventModel(Base):
     id          = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     title       = Column(String, nullable=False)
     description = Column(Text,   nullable=False)
-    date        = Column(String, nullable=False)  # stored as ISO string from datetime-local
+    date        = Column(String, nullable=False)
     location    = Column(String, nullable=False)
     attendees   = Column(Text, default="[]")      # JSON list of emails
     created_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc))
@@ -97,14 +113,6 @@ class LoginBody(BaseModel):
     email:    str
     password: str
 
-class ComplaintBody(BaseModel):
-    category:    str
-    location:    str
-    description: str
-    isPublic:    bool = True
-    coordinates: Optional[dict] = None   # {lat, lng} or null
-    imageName:   Optional[str]  = None
-
 class PatchComplaintBody(BaseModel):
     status:  Optional[str] = None
     remarks: Optional[str] = None
@@ -118,6 +126,13 @@ class EventBody(BaseModel):
     description: str
     date:        str
     location:    str
+
+class CommentBody(BaseModel):
+    text: str
+
+class PatchProfileBody(BaseModel):
+    name:     Optional[str] = None
+    password: Optional[str] = None
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -167,7 +182,7 @@ def admin_required(user: UserModel = Depends(current_user)) -> UserModel:
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
-# Serialisers — all camelCase as specified
+# ─── Serialisers ──────────────────────────────────────────────────────────────
 
 def serialize_complaint(c: ComplaintModel) -> dict:
     upvoted_by = json.loads(c.upvoted_by or "[]")
@@ -185,6 +200,7 @@ def serialize_complaint(c: ComplaintModel) -> dict:
         "status":      c.status,
         "remarks":     c.remarks,
         "imageName":   c.image_name,
+        "imageUrl":    c.image_url,
         "upvotes":     c.upvotes,
         "upvotedBy":   upvoted_by,
         "coordinates": coordinates,
@@ -211,6 +227,16 @@ def serialize_event(e: EventModel) -> dict:
         "createdAt":   e.created_at.isoformat() if e.created_at else None,
     }
 
+def serialize_comment(c: CommentModel) -> dict:
+    return {
+        "id":          c.id,
+        "complaintId": c.complaint_id,
+        "userEmail":   c.user_email,
+        "userName":    c.user_name,
+        "text":        c.text,
+        "timestamp":   c.timestamp.isoformat() if c.timestamp else None,
+    }
+
 # ─── App ──────────────────────────────────────────────────────────────────────
 
 app = FastAPI(title="CivicFix API")
@@ -222,6 +248,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve uploaded files as static
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 @app.on_event("startup")
 def startup():
@@ -278,6 +307,35 @@ def login(body: LoginBody, db: Session = Depends(get_db)):
 def me(user: UserModel = Depends(current_user)):
     return {"name": user.name, "email": user.email, "role": user.role}
 
+# ─── User Profile ─────────────────────────────────────────────────────────────
+
+@app.get("/users/me/profile")
+def get_profile(user: UserModel = Depends(current_user), db: Session = Depends(get_db)):
+    total = db.query(ComplaintModel).filter(ComplaintModel.user_email == user.email).count()
+    resolved = db.query(ComplaintModel).filter(
+        ComplaintModel.user_email == user.email,
+        ComplaintModel.status == "Resolved"
+    ).count()
+    return {
+        "name":               user.name,
+        "email":              user.email,
+        "role":               user.role,
+        "createdAt":          user.created_at.isoformat() if user.created_at else None,
+        "totalComplaints":    total,
+        "resolvedComplaints": resolved,
+    }
+
+@app.patch("/users/me/profile")
+def update_profile(body: PatchProfileBody, user: UserModel = Depends(current_user), db: Session = Depends(get_db)):
+    if body.name:
+        user.name = body.name
+        # also update session token sub stays same (email), but name changes
+    if body.password:
+        user.password_hash = hash_password(body.password)
+    db.commit()
+    db.refresh(user)
+    return {"name": user.name, "email": user.email, "role": user.role}
+
 # ─── Complaints ───────────────────────────────────────────────────────────────
 
 @app.get("/complaints")
@@ -298,25 +356,45 @@ def get_complaint(complaint_id: str, user: UserModel = Depends(current_user), db
     c = db.query(ComplaintModel).filter(ComplaintModel.id == complaint_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Complaint not found")
-    # Citizens can only see their own or public complaints
     if user.role != "admin" and c.user_email != user.email and not c.is_public:
         raise HTTPException(status_code=403, detail="Access denied")
     return serialize_complaint(c)
 
 @app.post("/complaints", status_code=201)
-def create_complaint(body: ComplaintBody, user: UserModel = Depends(current_user), db: Session = Depends(get_db)):
-    lat = str(body.coordinates["lat"]) if body.coordinates else None
-    lng = str(body.coordinates["lng"]) if body.coordinates else None
+async def create_complaint(
+    category:    str          = Form(...),
+    location:    str          = Form(...),
+    description: str          = Form(...),
+    isPublic:    str          = Form("true"),
+    lat:         Optional[str] = Form(None),
+    lng:         Optional[str] = Form(None),
+    image:       Optional[UploadFile] = File(None),
+    user:        UserModel    = Depends(current_user),
+    db:          Session      = Depends(get_db),
+):
+    image_name = None
+    image_url  = None
+
+    if image and image.filename:
+        ext        = os.path.splitext(image.filename)[1]
+        unique_name = f"{uuid.uuid4()}{ext}"
+        save_path   = os.path.join(UPLOADS_DIR, unique_name)
+        with open(save_path, "wb") as f:
+            shutil.copyfileobj(image.file, f)
+        image_name = unique_name
+        image_url  = f"{BASE_URL}/uploads/{unique_name}"
+
     c = ComplaintModel(
         user_email  = user.email,
         user_name   = user.name,
-        category    = body.category,
-        location    = body.location,
-        description = body.description,
-        is_public   = body.isPublic,
-        lat         = lat,
-        lng         = lng,
-        image_name  = body.imageName,
+        category    = category,
+        location    = location,
+        description = description,
+        is_public   = isPublic.lower() in ("true", "1", "yes"),
+        lat         = lat or None,
+        lng         = lng or None,
+        image_name  = image_name,
+        image_url   = image_url,
     )
     db.add(c)
     db.commit()
@@ -348,7 +426,6 @@ def upvote_complaint(complaint_id: str, user: UserModel = Depends(current_user),
         raise HTTPException(status_code=404, detail="Complaint not found")
     upvoted_by = json.loads(c.upvoted_by or "[]")
     if user.email in upvoted_by:
-        # toggle off
         upvoted_by.remove(user.email)
         c.upvotes = max(0, c.upvotes - 1)
     else:
@@ -358,6 +435,29 @@ def upvote_complaint(complaint_id: str, user: UserModel = Depends(current_user),
     db.commit()
     db.refresh(c)
     return serialize_complaint(c)
+
+# ─── Comments ────────────────────────────────────────────────────────────────
+
+@app.get("/complaints/{complaint_id}/comments")
+def get_comments(complaint_id: str, user: UserModel = Depends(current_user), db: Session = Depends(get_db)):
+    comments = db.query(CommentModel).filter(CommentModel.complaint_id == complaint_id).all()
+    return [serialize_comment(c) for c in comments]
+
+@app.post("/complaints/{complaint_id}/comments", status_code=201)
+def add_comment(complaint_id: str, body: CommentBody, user: UserModel = Depends(current_user), db: Session = Depends(get_db)):
+    complaint = db.query(ComplaintModel).filter(ComplaintModel.id == complaint_id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    comment = CommentModel(
+        complaint_id = complaint_id,
+        user_email   = user.email,
+        user_name    = user.name,
+        text         = body.text,
+    )
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+    return serialize_comment(comment)
 
 # ─── Announcements ────────────────────────────────────────────────────────────
 
@@ -446,9 +546,9 @@ def admin_stats(admin: UserModel = Depends(admin_required), db: Session = Depend
     resolved         = db.query(ComplaintModel).filter(ComplaintModel.status == "Resolved").count()
     in_progress      = db.query(ComplaintModel).filter(ComplaintModel.status == "In Progress").count()
     return {
-        "totalUsers":       total_users,
-        "totalComplaints":  total_complaints,
-        "pending":          pending,
-        "resolved":         resolved,
-        "inProgress":       in_progress,
+        "totalUsers":      total_users,
+        "totalComplaints": total_complaints,
+        "pending":         pending,
+        "resolved":        resolved,
+        "inProgress":      in_progress,
     }

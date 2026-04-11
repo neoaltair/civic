@@ -1,43 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Announcements - CivicFix</title>
+    <title>Announcements — CivicFix</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-
 <body>
-    <!-- Navbar injected by script.js -->
+    <script src="script.js"></script>
 
     <div class="dashboard-layout">
-        <aside class="sidebar">
-            <h3 class="mb-lg" style="padding-left: 1rem;">Menu</h3>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-title">My Account</div>
             <ul class="sidebar-nav">
-                <li><a href="citizen.html" class="sidebar-link">Dashboard</a></li>
-                <li><a href="submit_complaint.html" class="sidebar-link">Submit Complaint</a></li>
-                <li><a href="my_complaints.html" class="sidebar-link">My Complaints</a></li>
-                <li><a href="public_complaints.html" class="sidebar-link">Public Complaints</a></li>
-                <li><a href="announcements.html" class="sidebar-link active">Announcements</a></li>
-                <li><a href="feedback.html" class="sidebar-link">Feedback</a></li>
-                <li><a href="volunteer.html" class="sidebar-link">Volunteer</a></li>
+                <li><a href="citizen.html" class="sidebar-link">📊 Dashboard</a></li>
+                <li><a href="submit_complaint.html" class="sidebar-link">➕ Submit Complaint</a></li>
+                <li><a href="my_complaints.html" class="sidebar-link">📋 My Complaints</a></li>
+                <li><a href="public_complaints.html" class="sidebar-link">🌍 Public Feed</a></li>
+                <li><a href="map.html" class="sidebar-link">🗺️ Community Map</a></li>
+                <li><a href="announcements.html" class="sidebar-link active">📢 Announcements</a></li>
+                <li><a href="volunteer.html" class="sidebar-link">🤝 Volunteer</a></li>
+                <li><a href="feedback.html" class="sidebar-link">⭐ Feedback</a></li>
             </ul>
+            <div class="sidebar-footer">
+                <a href="profile.html" class="sidebar-link">👤 Profile</a>
+                <a href="#" onclick="Auth.logout()" class="sidebar-link" style="color:var(--danger)">🚪 Logout</a>
+            </div>
         </aside>
 
         <main class="main-content">
-            <h2 class="mb-lg">Official Announcements</h2>
-
-            <div id="announcementList" class="flex flex-col gap-md">
-                <!-- Loaded dynamically -->
+            <div class="page-header">
+                <div><h2>📢 Announcements</h2><p class="text-secondary">Official notices from the administration</p></div>
+                <button class="btn btn-ghost btn-sm" id="sidebarToggle">☰</button>
             </div>
+            <div id="announcementList"><p class="text-secondary">Loading…</p></div>
         </main>
     </div>
 
-    <script src="script.js"></script>
     <script>
-        const user = Auth.check();
+        Auth.check();
         UI.renderNavbar();
 
         async function init() {
@@ -45,22 +46,23 @@
             const container = document.getElementById('announcementList');
 
             if (announcements.length === 0) {
-                container.innerHTML = '<p class="text-secondary">No announcements available at this time.</p>';
-            } else {
-                container.innerHTML = announcements.map(a => `
-                    <div class="card" style="border-left: 5px solid var(--secondary-color);">
-                        <div class="flex justify-between items-center mb-sm">
-                            <h3 style="font-size: 1.25rem;">${a.title}</h3>
-                            <span class="text-secondary" style="font-size: 0.875rem;">${UI.formatDate(a.timestamp)}</span>
-                        </div>
-                        <p>${a.content}</p>
-                    </div>
-                `).join('');
+                container.innerHTML = '<div class="card"><p class="text-secondary">No announcements at this time.</p></div>';
+                return;
             }
+
+            container.innerHTML = announcements.map(a => `
+                <div class="card announcement-card mb-sm">
+                    <div class="flex justify-between items-center mb-sm">
+                        <h4>${a.title}</h4>
+                        <span class="text-secondary text-sm">${UI.formatDate(a.timestamp)}</span>
+                    </div>
+                    <p>${a.content}</p>
+                    <p class="text-sm text-secondary mt-xs" style="font-style:italic;">— ${a.author}</p>
+                </div>
+            `).join('');
         }
 
         init();
     </script>
 </body>
-
 </html>

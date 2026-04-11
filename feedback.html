@@ -1,76 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feedback - CivicFix</title>
+    <title>Feedback — CivicFix</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .star-group { display: flex; gap: .4rem; flex-direction: row-reverse; justify-content: flex-end; }
+        .star-group input { display: none; }
+        .star-group label {
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: var(--border-light);
+            transition: var(--ease);
+        }
+        .star-group input:checked ~ label,
+        .star-group label:hover,
+        .star-group label:hover ~ label {
+            color: var(--warning);
+        }
+    </style>
 </head>
-
 <body>
-    <!-- Navbar injected by script.js -->
+    <script src="script.js"></script>
 
     <div class="dashboard-layout">
-        <aside class="sidebar">
-            <h3 class="mb-lg" style="padding-left: 1rem;">Menu</h3>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-title">My Account</div>
             <ul class="sidebar-nav">
-                <li><a href="citizen.html" class="sidebar-link">Dashboard</a></li>
-                <li><a href="submit_complaint.html" class="sidebar-link">Submit Complaint</a></li>
-                <li><a href="my_complaints.html" class="sidebar-link">My Complaints</a></li>
-                <li><a href="public_complaints.html" class="sidebar-link">Public Complaints</a></li>
-                <li><a href="announcements.html" class="sidebar-link">Announcements</a></li>
-                <li><a href="feedback.html" class="sidebar-link active">Feedback</a></li>
-                <li><a href="volunteer.html" class="sidebar-link">Volunteer</a></li>
+                <li><a href="citizen.html" class="sidebar-link">📊 Dashboard</a></li>
+                <li><a href="submit_complaint.html" class="sidebar-link">➕ Submit Complaint</a></li>
+                <li><a href="my_complaints.html" class="sidebar-link">📋 My Complaints</a></li>
+                <li><a href="public_complaints.html" class="sidebar-link">🌍 Public Feed</a></li>
+                <li><a href="map.html" class="sidebar-link">🗺️ Community Map</a></li>
+                <li><a href="announcements.html" class="sidebar-link">📢 Announcements</a></li>
+                <li><a href="volunteer.html" class="sidebar-link">🤝 Volunteer</a></li>
+                <li><a href="feedback.html" class="sidebar-link active">⭐ Feedback</a></li>
             </ul>
+            <div class="sidebar-footer">
+                <a href="profile.html" class="sidebar-link">👤 Profile</a>
+                <a href="#" onclick="Auth.logout()" class="sidebar-link" style="color:var(--danger)">🚪 Logout</a>
+            </div>
         </aside>
 
         <main class="main-content">
-            <h2 class="mb-lg">Service Feedback</h2>
-
-            <div class="card mb-lg" id="feedbackFormCard" style="max-width: 600px;">
-                <h3 class="mb-md">Rate Resolution Quality</h3>
-                <p class="text-secondary mb-md">We value your opinion. Please rate how well we handled your complaint.
-                </p>
-
-                <form id="feedbackForm">
-                    <div class="input-group">
-                        <label for="complaintId">Select Resolved Complaint</label>
-                        <select id="complaintId" class="input-control" required>
-                            <!-- Populated dynamically -->
-                        </select>
-                    </div>
-
-                    <div class="input-group">
-                        <label>Rating</label>
-                        <div class="flex gap-md" style="font-size: 1.5rem;">
-                            <label><input type="radio" name="rating" value="1" required> ⭐</label>
-                            <label><input type="radio" name="rating" value="2"> ⭐⭐</label>
-                            <label><input type="radio" name="rating" value="3"> ⭐⭐⭐</label>
-                            <label><input type="radio" name="rating" value="4"> ⭐⭐⭐⭐</label>
-                            <label><input type="radio" name="rating" value="5"> ⭐⭐⭐⭐⭐</label>
-                        </div>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="comments">Comments</label>
-                        <textarea id="comments" class="input-control" rows="3"
-                            placeholder="Any additional comments?"></textarea>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary">Submit Feedback</button>
-                </form>
+            <div class="page-header">
+                <div><h2>⭐ Submit Feedback</h2><p class="text-secondary">Rate resolved complaints</p></div>
+                <button class="btn btn-ghost btn-sm" id="sidebarToggle">☰</button>
             </div>
 
-            <h3 class="mb-md">Your Feedback History</h3>
-            <div id="historyList" class="flex flex-col gap-sm">
-                <!-- Loaded dynamically -->
+            <div class="grid grid-cols-2 gap-md">
+                <!-- Submit form -->
+                <div class="card">
+                    <h3 class="mb-md">Rate a Resolution</h3>
+                    <div id="feedbackMsg"></div>
+                    <form id="feedbackForm">
+                        <div class="input-group">
+                            <label for="complaintId">Resolved Complaint</label>
+                            <select id="complaintId" class="input-control" required>
+                                <option value="">Loading…</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Rating</label>
+                            <div class="star-group">
+                                <input type="radio" id="s5" name="rating" value="5"><label for="s5">★</label>
+                                <input type="radio" id="s4" name="rating" value="4"><label for="s4">★</label>
+                                <input type="radio" id="s3" name="rating" value="3"><label for="s3">★</label>
+                                <input type="radio" id="s2" name="rating" value="2"><label for="s2">★</label>
+                                <input type="radio" id="s1" name="rating" value="1"><label for="s1">★</label>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="comments">Comments</label>
+                            <textarea id="comments" class="input-control" rows="4" placeholder="How was the resolution handled?" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Feedback</button>
+                    </form>
+                </div>
+
+                <!-- History -->
+                <div class="card">
+                    <h3 class="mb-md">Your Feedback History</h3>
+                    <div id="historyList"><p class="text-secondary">No feedback submitted yet.</p></div>
+                </div>
             </div>
         </main>
     </div>
 
-    <script src="script.js"></script>
     <script>
         const user = Auth.check();
         UI.renderNavbar();
@@ -79,69 +96,63 @@
         const preSelectedId = urlParams.get('id');
 
         async function init() {
-            // Populate complaints dropdown from API
             const allComplaints = await Storage.getComplaints();
-            const resolvedComplaints = allComplaints.filter(c => c.userEmail === user.email && c.status === 'Resolved');
+            const resolved = allComplaints.filter(c => c.userEmail === user.email && c.status === 'Resolved');
             const select = document.getElementById('complaintId');
 
-            if (resolvedComplaints.length === 0) {
-                select.innerHTML = '<option value="">No resolved complaints found</option>';
+            if (resolved.length === 0) {
+                select.innerHTML = '<option value="">No resolved complaints yet</option>';
                 select.disabled = true;
             } else {
-                select.innerHTML = '<option value="">Select a complaint</option>' +
-                    resolvedComplaints.map(c => `
+                select.innerHTML = '<option value="">Select complaint…</option>' +
+                    resolved.map(c => `
                         <option value="${c.id}" ${preSelectedId === c.id ? 'selected' : ''}>
-                            ${c.category} - ${UI.formatDate(c.timestamp)}
+                            ${c.category} — ${UI.formatDate(c.timestamp)}
                         </option>
                     `).join('');
             }
 
-            // Handle submission (feedback stays in localStorage)
-            document.getElementById('feedbackForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                if (select.disabled) return;
-
-                const complaintId = select.value;
-                const rating = document.querySelector('input[name="rating"]:checked').value;
-                const comments = document.getElementById('comments').value;
-
-                const feedback = {
-                    userEmail: user.email,
-                    complaintId,
-                    rating,
-                    comments,
-                    timestamp: new Date().toISOString()
-                };
-
-                const allFeedback = Storage.get('civic_feedback');
-                allFeedback.push(feedback);
-                Storage.set('civic_feedback', allFeedback);
-
-                alert('Thank you for your feedback!');
-                window.location.href = 'feedback.html';
-            });
-
-            // Load History (from localStorage)
-            const history = Storage.get('civic_feedback').filter(f => f.userEmail === user.email).reverse();
-            const historyContainer = document.getElementById('historyList');
-
-            if (history.length === 0) {
-                historyContainer.innerHTML = '<p class="text-secondary">No feedback submitted yet.</p>';
-            } else {
-                historyContainer.innerHTML = history.map(f => `
-                    <div class="card p-md">
+            // History from localStorage
+            const history = Storage.get('civic_feedback')
+                .filter(f => f.userEmail === user.email).reverse();
+            const histEl = document.getElementById('historyList');
+            histEl.innerHTML = history.length === 0
+                ? '<p class="text-secondary text-sm">No feedback submitted yet.</p>'
+                : history.map(f => `
+                    <div class="card mb-sm" style="padding:var(--sm);background:var(--surface-2);">
                         <div class="flex justify-between">
-                            <strong>Complaint ID: ${f.complaintId.substring(0, 8)}...</strong>
-                            <span>${'⭐'.repeat(f.rating)}</span>
+                            <span class="text-sm"><code class="mono">#${f.complaintId.substring(0,8)}</code></span>
+                            <span style="color:var(--warning);">${'★'.repeat(parseInt(f.rating))}${'☆'.repeat(5-parseInt(f.rating))}</span>
                         </div>
-                        <p class="mt-sm">${f.comments}</p>
+                        <p class="text-sm mt-xs" style="color:var(--text-muted);">${f.comments}</p>
                     </div>
                 `).join('');
-            }
         }
+
+        document.getElementById('feedbackForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const select = document.getElementById('complaintId');
+            if (select.disabled || !select.value) return;
+            const ratingInput = document.querySelector('input[name="rating"]:checked');
+            if (!ratingInput) { alert('Please select a rating.'); return; }
+            const msg = document.getElementById('feedbackMsg');
+
+            const feedback = {
+                userEmail:   user.email,
+                complaintId: select.value,
+                rating:      ratingInput.value,
+                comments:    document.getElementById('comments').value,
+                timestamp:   new Date().toISOString(),
+            };
+            const all = Storage.get('civic_feedback');
+            all.push(feedback);
+            Storage.set('civic_feedback', all);
+
+            msg.innerHTML = '<div class="msg-box msg-success">✓ Thank you for your feedback!</div>';
+            setTimeout(() => window.location.href = 'feedback.html', 1200);
+        });
 
         init();
     </script>
 </body>
-
 </html>

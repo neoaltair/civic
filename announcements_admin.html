@@ -1,56 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Announcements - CivicFix Admin</title>
+    <title>Manage Announcements — CivicFix</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-
 <body>
-    <!-- Navbar injected by script.js -->
+    <script src="script.js"></script>
 
     <div class="dashboard-layout">
-        <aside class="sidebar" style="background-color: #f1f5f9;">
-            <h3 class="mb-lg" style="padding-left: 1rem;">Admin Panel</h3>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-title">Admin Panel</div>
             <ul class="sidebar-nav">
-                <li><a href="admin.html" class="sidebar-link">Dashboard</a></li>
-                <li><a href="manage_complaints.html" class="sidebar-link">Manage Complaints</a></li>
-                <li><a href="analytics.html" class="sidebar-link">Analytics</a></li>
-                <li><a href="announcements_admin.html" class="sidebar-link active">Announcements</a></li>
+                <li><a href="admin.html" class="sidebar-link">📊 Dashboard</a></li>
+                <li><a href="manage_complaints.html" class="sidebar-link">📋 Manage Complaints</a></li>
+                <li><a href="map.html" class="sidebar-link">🗺️ Community Map</a></li>
+                <li><a href="analytics.html" class="sidebar-link">📈 Analytics</a></li>
+                <li><a href="announcements_admin.html" class="sidebar-link active">📢 Announcements</a></li>
+                <li><a href="manage_events.html" class="sidebar-link">📅 Events</a></li>
             </ul>
+            <div class="sidebar-footer">
+                <a href="profile.html" class="sidebar-link">👤 Profile</a>
+                <a href="#" onclick="Auth.logout()" class="sidebar-link" style="color:var(--danger)">🚪 Logout</a>
+            </div>
         </aside>
 
         <main class="main-content">
-            <h2 class="mb-lg">Manage Announcements</h2>
+            <div class="page-header">
+                <div><h2>📢 Manage Announcements</h2></div>
+                <button class="btn btn-ghost btn-sm" id="sidebarToggle">☰</button>
+            </div>
 
-            <div class="card mb-xl">
-                <h3>Post New Announcement</h3>
-                <form id="announcementForm" class="mt-md">
+            <!-- Create form -->
+            <div class="card mb-md">
+                <h3 class="mb-md">Publish New Announcement</h3>
+                <div id="formMsg"></div>
+                <form id="announcementForm">
                     <div class="input-group">
                         <label for="title">Title</label>
-                        <input type="text" id="title" class="input-control" required
-                            placeholder="e.g. Road Closure Notice">
+                        <input type="text" id="title" class="input-control" placeholder="Announcement title…" required>
                     </div>
                     <div class="input-group">
                         <label for="content">Content</label>
-                        <textarea id="content" class="input-control" rows="4" required
-                            placeholder="Details about the announcement..."></textarea>
+                        <textarea id="content" class="input-control" rows="4" placeholder="Write your announcement…" required></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">Publish Announcement</button>
+                    <button type="submit" class="btn btn-primary">📢 Publish</button>
                 </form>
             </div>
 
-            <h3 class="mb-md">History</h3>
-            <div id="announcementList" class="flex flex-col gap-md">
-                <!-- Loaded dynamically -->
+            <!-- List -->
+            <div class="card">
+                <h3 class="mb-md">Published Announcements</h3>
+                <div id="announcementList"><p class="text-secondary">Loading…</p></div>
             </div>
         </main>
     </div>
 
-    <script src="script.js"></script>
     <script>
         Auth.checkAdmin();
         UI.renderNavbar();
@@ -58,50 +64,48 @@
         async function renderAnnouncements() {
             const announcements = (await Storage.getAnnouncements()).reverse();
             const container = document.getElementById('announcementList');
-
             if (announcements.length === 0) {
-                container.innerHTML = '<p class="text-secondary">No announcements found.</p>';
-            } else {
-                container.innerHTML = announcements.map(a => `
-                    <div class="card p-md flex justify-between items-center">
-                        <div>
-                            <h4>${a.title}</h4>
-                            <p class="text-secondary text-sm">${UI.formatDate(a.timestamp)}</p>
-                        </div>
-                        <button onclick="deleteAnnouncement('${a.id}')" class="btn btn-outline text-danger" style="border-color: var(--danger-color); padding: 0.25rem 0.75rem;">Delete</button>
-                    </div>
-                `).join('');
+                container.innerHTML = '<p class="text-secondary">No announcements published yet.</p>';
+                return;
             }
+            container.innerHTML = announcements.map(a => `
+                <div class="card announcement-card mb-sm" style="padding:var(--sm);">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <strong>${a.title}</strong>
+                            <p class="text-secondary text-sm mt-xs">${UI.formatDate(a.timestamp)} — ${a.author}</p>
+                        </div>
+                        <button onclick="deleteAnn('${a.id}')" class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:var(--danger-dim);">Delete</button>
+                    </div>
+                </div>
+            `).join('');
         }
 
         document.getElementById('announcementForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const title = document.getElementById('title').value;
             const content = document.getElementById('content').value;
-
+            const msg = document.getElementById('formMsg');
             try {
                 await Storage.addAnnouncement({ title, content });
-                alert('Announcement published!');
+                msg.innerHTML = '<div class="msg-box msg-success">✓ Published!</div>';
                 e.target.reset();
                 renderAnnouncements();
-            } catch (err) {
-                alert('Failed to publish announcement.');
+            } catch {
+                msg.innerHTML = '<div class="msg-box msg-error">✗ Failed to publish.</div>';
             }
         });
 
-        async function deleteAnnouncement(id) {
-            if (confirm('Are you sure you want to delete this announcement?')) {
+        async function deleteAnn(id) {
+            if (confirm('Delete this announcement?')) {
                 try {
                     await Storage.deleteAnnouncement(id);
                     renderAnnouncements();
-                } catch (err) {
-                    alert('Failed to delete announcement.');
-                }
+                } catch { alert('Delete failed.'); }
             }
         }
 
         renderAnnouncements();
     </script>
 </body>
-
 </html>

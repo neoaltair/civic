@@ -3,65 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CivicFix - Your Voice, Our City</title>
+    <title>CivicFix — Report. Track. Resolve.</title>
+    <meta name="description" content="CivicFix is a civic complaint management platform. Report local issues, track resolution, and engage your community.">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { overflow-x: hidden; }
+
+        /* Cycling subtitle animation */
+        .subtitle-slot {
+            display: inline-block;
+            overflow: hidden;
+            height: 1.6em;
+            vertical-align: bottom;
+        }
+        .subtitle-slot span {
+            display: block;
+            animation: cycleText 12s ease-in-out infinite;
+        }
+        @keyframes cycleText {
+            0%,18%   { transform: translateY(0);       opacity: 1; }
+            22%,32%  { transform: translateY(-100%);   opacity: 0; }
+            33%,51%  { transform: translateY(-200%);   opacity: 1; }
+            55%,65%  { transform: translateY(-300%);   opacity: 0; }
+            66%,84%  { transform: translateY(-400%);  opacity: 1; }
+            88%,100% { transform: translateY(-500%);  opacity: 0; }
+        }
+        .grid-text {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(30,45,74,.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(30,45,74,.15) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 80%);
+        }
+    </style>
 </head>
 <body>
-   
+    <script src="script.js"></script>
+    <script>UI.renderNavbar();</script>
 
-    <header class="hero">
-        <div class="container">
-            <h1>Building a Better City, Together</h1>
-            <p>Report issues, track progress, and stay informed. Join thousands of citizens making our municipality a better place to live.</p>
-            <div class="flex gap-sm justify-center">
-                <a href="register.html" class="btn btn-primary" style="background-color: var(--accent-color); color: var(--primary-color);">Get Started</a>
-                <a href="#services" class="btn btn-outline" style="color: white; border-color: white;">Learn More</a>
+    <!-- Hero -->
+    <section class="hero">
+        <div class="grid-text"></div>
+        <div class="hero-content">
+            <div style="display:inline-flex;align-items:center;gap:.5rem;padding:.3rem 1rem;border:1px solid var(--border-light);border-radius:var(--r-full);font-size:.78rem;color:var(--text-muted);margin-bottom:var(--md);font-family:var(--font-mono);">
+                ✦ CIVIC PARTICIPATION PLATFORM
+            </div>
+
+            <h1 class="hero-title">
+                Civic<span class="accent">Fix</span>
+            </h1>
+
+            <div style="font-size:1.35rem;color:var(--text-muted);margin-bottom:var(--lg);min-height:2.2rem;">
+                <span id="cycleText" style="transition:opacity .5s,transform .5s;display:inline-block;">Report it. Track it. Resolve it.</span>
+            </div>
+
+            <p class="hero-desc">
+                A direct line between citizens and city administration.
+                Submit issues, watch them resolved, and build a better community together.
+            </p>
+
+            <div class="hero-btns">
+                <a href="login.html" class="btn btn-primary" style="padding:.8rem 2.2rem;font-size:.9rem;">Login</a>
+                <a href="register.html" class="btn btn-outline" style="padding:.8rem 2.2rem;font-size:.9rem;">Create Account</a>
+            </div>
+
+            <div class="feature-grid" style="margin-top:4rem;">
+                <div class="feature-card">
+                    <div class="feature-icon">🗺️</div>
+                    <h3>Map-Based Reporting</h3>
+                    <p>Pin issues on an interactive map with precise GPS coordinates for faster resolution.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Real-Time Tracking</h3>
+                    <p>Watch your complaint go from Pending to Resolved with live status updates and admin remarks.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🤝</div>
+                    <h3>Community Upvoting</h3>
+                    <p>Upvote public complaints to prioritize critical issues and amplify your community's voice.</p>
+                </div>
             </div>
         </div>
-    </header>
-
-    <main class="container mt-xl" id="services">
-        <section class="mb-xl">
-            <h2 class="text-center mb-lg">Our Services</h2>
-            <div class="grid grid-cols-3 gap-md">
-                <div class="card text-center">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">📢</div>
-                    <h3>Report Issues</h3>
-                    <p class="text-secondary mt-sm">Spot a pothole or broken streetlight? Snap a photo and report it instantly. We'll track it until it's fixed.</p>
-                </div>
-                <div class="card text-center">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔔</div>
-                    <h3>Stay Informed</h3>
-                    <p class="text-secondary mt-sm">Get real-time alerts about road closures, weather warnings, and community events directly from the municipality.</p>
-                </div>
-                <div class="card text-center">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🤝</div>
-                    <h3>Volunteer</h3>
-                    <p class="text-secondary mt-sm">Join hands with neighbors for community cleanups, events, and other civic activities.</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="mb-xl">
-            <div class="card flex flex-col items-center text-center p-xl" style="background: linear-gradient(to right, #f8fafc, #eff6ff);">
-                <h2>Admin Login</h2>
-                <p class="mt-sm mb-md" style="max-width: 500px;">Are you a municipal administrator? Log in to manage complaints, post announcements, and view analytics.</p>
-                <a href="login.html" class="btn btn-outline">Admin Portal</a>
-            </div>
-        </section>
-    </main>
+    </section>
 
     <footer>
-        <div class="container footer-content">
-            <p>&copy; 2024 CivicFix Municipality Platform. All rights reserved.</p>
-        </div>
+        <p>© 2025 CivicFix · Built for better governance</p>
     </footer>
 
-    <script src="script.js"></script>
     <script>
-        
-        UI.renderNavbar();
+        // Cycling subtitle
+        const texts = [
+            'Report it. Track it. Resolve it.',
+            'Your city. Your voice.',
+            'Transparent governance starts here.',
+        ];
+        let idx = 0;
+        const el = document.getElementById('cycleText');
+        setInterval(() => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(8px)';
+            setTimeout(() => {
+                idx = (idx + 1) % texts.length;
+                el.textContent = texts[idx];
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            }, 500);
+        }, 4000);
     </script>
 </body>
 </html>

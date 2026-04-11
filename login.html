@@ -1,77 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - CivicFix</title>
+    <title>Login — CivicFix</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .auth-wrap {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--lg);
+        }
+        .auth-card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-xl);
+            padding: var(--xl);
+        }
+        .auth-brand {
+            text-align: center;
+            margin-bottom: var(--lg);
+        }
+        .auth-brand h1 {
+            font-family: var(--font-head);
+            font-size: 2.2rem;
+            font-weight: 800;
+        }
+        .auth-brand .dot { color: var(--accent); }
+        .auth-brand p { color: var(--text-muted); font-size: .9rem; margin-top: .35rem; }
+    </style>
 </head>
-
 <body>
+    <script src="script.js"></script>
+    <script>UI.renderNavbar();</script>
 
-    <main class="container flex justify-center items-center" style="min-height: 80vh;">
-        <div class="card" style="width: 100%; max-width: 400px;">
-            <h2 class="text-center mb-lg">Welcome Back</h2>
+    <div class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <h1>CivicFix<span class="dot">.</span></h1>
+                <p>Sign in to your account</p>
+            </div>
+
+            <div id="message" class="hidden"></div>
 
             <form id="loginForm">
                 <div class="input-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" class="input-control" required placeholder="john@example.com">
+                    <input type="email" id="email" class="input-control" placeholder="you@example.com" required>
                 </div>
-
                 <div class="input-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" class="input-control" required placeholder="••••••••">
+                    <input type="password" id="password" class="input-control" placeholder="••••••••" required>
                 </div>
-
-                <div id="message" class="mb-md text-center hidden"></div>
-
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+                <button type="submit" class="btn btn-primary w-100" id="loginBtn" style="margin-top:.5rem;">
+                    Sign In
+                </button>
             </form>
 
-            <p class="text-center mt-md text-secondary">
-                Don't have an account? <a href="register.html">Register</a>
+            <p class="text-center mt-md text-secondary text-sm">
+                Don't have an account? <a href="register.html" style="color:var(--accent);">Create one</a>
             </p>
-
-            <div class="mt-lg p-sm" style="background: #f1f5f9; border-radius: 8px; font-size: 0.8rem;">
-                <p><strong>Demo Admin:</strong> admin@civic.com / admin</p>
-            </div>
         </div>
-    </main>
+    </div>
 
-    <script src="script.js"></script>
     <script>
-        UI.renderNavbar();
-
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-
+            const btn = document.getElementById('loginBtn');
             const msg = document.getElementById('message');
-            msg.textContent = 'Logging in…';
-            msg.className = 'mb-md text-center text-secondary';
-            msg.classList.remove('hidden');
+
+            btn.textContent = 'Signing in…';
+            btn.disabled = true;
 
             const result = await Auth.login(email, password);
+            btn.textContent = 'Sign In';
+            btn.disabled = false;
 
-            msg.textContent = result.success ? 'Login successful! Redirecting…' : result.message;
+            const msgEl = document.getElementById('message');
+            msgEl.classList.remove('hidden');
+
             if (result.success) {
-                msg.className = 'mb-md text-center text-success';
+                msgEl.className = 'msg-box msg-success';
+                msgEl.textContent = '✓ Login successful! Redirecting…';
                 setTimeout(() => {
-                    if (result.user.role === 'admin') {
-                        window.location.href = 'admin.html';
-                    } else {
-                        window.location.href = 'citizen.html';
-                    }
+                    window.location.href = result.user.role === 'admin' ? 'admin.html' : 'citizen.html';
                 }, 800);
             } else {
-                msg.className = 'mb-md text-center text-danger';
+                msgEl.className = 'msg-box msg-error';
+                msgEl.textContent = '✗ ' + result.message;
             }
         });
     </script>
 </body>
-
 </html>

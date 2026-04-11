@@ -1,65 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analytics - CivicFix Admin</title>
+    <title>Analytics — CivicFix</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-
 <body>
-    
+    <script src="script.js"></script>
 
     <div class="dashboard-layout">
-        <aside class="sidebar" style="background-color: #f1f5f9;">
-            <h3 class="mb-lg" style="padding-left: 1rem;">Admin Panel</h3>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-title">Admin Panel</div>
             <ul class="sidebar-nav">
-                <li><a href="admin.html" class="sidebar-link">Dashboard</a></li>
-                <li><a href="manage_complaints.html" class="sidebar-link">Manage Complaints</a></li>
-                <li><a href="analytics.html" class="sidebar-link active">Analytics</a></li>
-                <li><a href="announcements_admin.html" class="sidebar-link">Announcements</a></li>
+                <li><a href="admin.html" class="sidebar-link">📊 Dashboard</a></li>
+                <li><a href="manage_complaints.html" class="sidebar-link">📋 Manage Complaints</a></li>
+                <li><a href="map.html" class="sidebar-link">🗺️ Community Map</a></li>
+                <li><a href="analytics.html" class="sidebar-link active">📈 Analytics</a></li>
+                <li><a href="announcements_admin.html" class="sidebar-link">📢 Announcements</a></li>
+                <li><a href="manage_events.html" class="sidebar-link">📅 Events</a></li>
             </ul>
+            <div class="sidebar-footer">
+                <a href="profile.html" class="sidebar-link">👤 Profile</a>
+                <a href="#" onclick="Auth.logout()" class="sidebar-link" style="color:var(--danger)">🚪 Logout</a>
+            </div>
         </aside>
 
         <main class="main-content">
-            <h2 class="mb-lg">Platform Analytics</h2>
+            <div class="page-header">
+                <div><h2>📈 Analytics</h2><p class="text-secondary">Platform statistics overview</p></div>
+                <button class="btn btn-ghost btn-sm" id="sidebarToggle">☰</button>
+            </div>
 
-            <div class="grid grid-cols-2 gap-md mb-lg">
-                <div class="card">
-                    <h3>Complaints by Status</h3>
-                    <div class="mt-md" id="statusChart">
-                        <!-- Simple visual representation using bars -->
-                    </div>
+            <!-- Stats Row -->
+            <div class="grid grid-cols-3 gap-md mb-lg" style="grid-template-columns:repeat(4,1fr);">
+                <div class="stat-card">
+                    <div class="stat-label">Total</div>
+                    <div class="stat-number" style="color:var(--info)" id="totalStat">—</div>
                 </div>
-
-                <div class="card">
-                    <h3>Top Categories</h3>
-                    <div class="mt-md" id="categoryChart">
-                        <!-- Simple visual representation using bars -->
-                    </div>
+                <div class="stat-card">
+                    <div class="stat-label">Pending</div>
+                    <div class="stat-number" style="color:var(--danger)" id="pendingStat">—</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">In Progress</div>
+                    <div class="stat-number" style="color:var(--warning)" id="progressStat">—</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Resolved</div>
+                    <div class="stat-number" style="color:var(--success)" id="resolvedStat">—</div>
                 </div>
             </div>
 
-            <div class="card">
-                <h3>Resolution Performance</h3>
-                <p class="text-secondary mt-sm">Average time to resolution: <strong
-                        style="color: var(--primary-color);">2.4 Days</strong> (Mock Data)</p>
-                <div class="mt-md p-md bg-light flex flex-col gap-sm">
-                    <p>Pending: <strong id="pendingStat">0</strong></p>
-                    <p>In Progress: <strong id="progressStat">0</strong></p>
-                    <p>Resolved: <strong id="resolvedStat">0</strong></p>
-                    <p>Total Complaints: <strong id="totalStat">0</strong></p>
+            <div class="grid grid-cols-2 gap-md">
+                <div class="card">
+                    <h3 class="mb-md">By Status</h3>
+                    <div id="statusChart"></div>
+                </div>
+                <div class="card">
+                    <h3 class="mb-md">By Category</h3>
+                    <div id="categoryChart"></div>
                 </div>
             </div>
         </main>
     </div>
 
-    <script src="script.js"></script>
     <script>
         Auth.checkAdmin();
         UI.renderNavbar();
+
+        function renderBarChart(containerId, data, colorVar) {
+            const container = document.getElementById(containerId);
+            const max = Math.max(...Object.values(data), 1);
+            const colors = {
+                'Pending': 'var(--danger)', 'In Progress': 'var(--warning)',
+                'Resolved': 'var(--success)', 'Rejected': 'var(--text-muted)',
+            };
+            container.innerHTML = Object.entries(data).map(([key, count]) => {
+                const w = (count / max) * 100;
+                const barColor = colors[key] || 'var(--accent)';
+                return `
+                    <div class="mb-sm">
+                        <div class="flex justify-between mb-xs">
+                            <span class="text-sm font-medium" style="color:var(--text);">${key}</span>
+                            <span class="text-sm text-secondary">${count}</span>
+                        </div>
+                        <div style="background:var(--surface-2);height:8px;border-radius:4px;">
+                            <div style="background:${barColor};height:100%;width:${w}%;border-radius:4px;transition:width .6s ease;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<p class="text-secondary text-sm">No data yet.</p>';
+        }
 
         async function init() {
             const [stats, complaints] = await Promise.all([
@@ -67,52 +99,22 @@
                 Storage.getComplaints(),
             ]);
 
-            // Status Stats
-            const statusCounts = {};
-            complaints.forEach(c => {
-                statusCounts[c.status] = (statusCounts[c.status] || 0) + 1;
-            });
+            document.getElementById('totalStat').textContent    = stats.totalComplaints;
+            document.getElementById('pendingStat').textContent  = stats.pending;
+            document.getElementById('progressStat').textContent = stats.inProgress;
+            document.getElementById('resolvedStat').textContent = stats.resolved;
 
-            // Category Stats
-            const categoryCounts = {};
+            const statusCounts = {}, categoryCounts = {};
             complaints.forEach(c => {
+                statusCounts[c.status]    = (statusCounts[c.status]    || 0) + 1;
                 categoryCounts[c.category] = (categoryCounts[c.category] || 0) + 1;
             });
 
             renderBarChart('statusChart', statusCounts);
             renderBarChart('categoryChart', categoryCounts);
-
-            document.getElementById('pendingStat').textContent = stats.pending || 0;
-            document.getElementById('progressStat').textContent = stats.inProgress || 0;
-            document.getElementById('resolvedStat').textContent = stats.resolved || 0;
-            document.getElementById('totalStat').textContent = stats.totalComplaints || 0;
-        }
-
-        function renderBarChart(containerId, data) {
-            const container = document.getElementById(containerId);
-            const max = Math.max(...Object.values(data), 1); // Avoid div by zero
-
-            const html = Object.keys(data).map(key => {
-                const count = data[key];
-                const width = (count / max) * 100;
-                return `
-                    <div class="mb-sm">
-                        <div class="flex justify-between mb-xs">
-                            <span class="text-sm font-medium">${key}</span>
-                            <span class="text-sm text-secondary">${count}</span>
-                        </div>
-                        <div style="background: #e2e8f0; height: 8px; border-radius: 4px; width: 100%;">
-                            <div style="background: var(--secondary-color); height: 100%; width: ${width}%; border-radius: 4px;"></div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            container.innerHTML = html || '<p class="text-secondary">No data available.</p>';
         }
 
         init();
     </script>
 </body>
-
 </html>

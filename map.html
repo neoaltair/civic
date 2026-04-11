@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Map — CivicFix</title>
+    <meta name="description" content="View all public civic complaints on an interactive map.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+    <script src="script.js"></script>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar injected by role -->
+        <div id="sidebarContainer"></div>
+
+        <main class="main-content">
+            <div class="page-header">
+                <div>
+                    <h2>🗺️ Community Map</h2>
+                    <p class="text-secondary">All public complaints with location data</p>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="sidebarToggle">☰ Menu</button>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar" id="filterBar">
+                <button class="filter-btn active" data-cat="all">All</button>
+                <button class="filter-btn" data-cat="Roads & Potholes">🛣️ Roads</button>
+                <button class="filter-btn" data-cat="Garbage Collection">🗑️ Garbage</button>
+                <button class="filter-btn" data-cat="Street Lighting">💡 Lighting</button>
+                <button class="filter-btn" data-cat="Water Supply">💧 Water</button>
+                <button class="filter-btn" data-cat="Sewage & Drainage">🚰 Sewage</button>
+                <button class="filter-btn" data-cat="Public Property">🏛️ Property</button>
+                <button class="filter-btn" data-cat="Noise Complaint">🔊 Noise</button>
+                <button class="filter-btn" data-cat="Other">📌 Other</button>
+            </div>
+
+            <!-- Map -->
+            <div id="map" style="height: calc(100vh - 260px); min-height: 400px;"></div>
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const user = Auth.check();
+        UI.renderNavbar();
+
+        // Build sidebar based on role
+        const sidebarContainer = document.getElementById('sidebarContainer');
+        if (user.role === 'admin') {
+            sidebarContainer.innerHTML = `
+                <aside class="sidebar" id="sidebar">
+                    <div class="sidebar-title">Admin Panel</div>
+                    <ul class="sidebar-nav">
+                        <li><a href="admin.html" class="sidebar-link">📊 Dashboard</a></li>
+                        <li><a href="manage_complaints.html" class="sidebar-link">📋 Complaints</a></li>
+                        <li><a href="map.html" class="sidebar-link active">🗺️ Community Map</a></li>
+                        <li><a href="analytics.html" class="sidebar-link">📈 Analytics</a></li>
+                        <li><a href="announcements_admin.html" class="sidebar-link">📢 Announcements</a></li>
+                        <li><a href="manage_events.html" class="sidebar-link">📅 Events</a></li>
+                    </ul>
+                    <div class="sidebar-footer">
+                        <a href="#" onclick="Auth.logout()" class="sidebar-link" style="color:var(--danger)">🚪 Logout</a>
+                    </div>
+                </aside>`;
+        } else {
+            sidebarContainer.innerHTML = `
+                <aside class="sidebar" id="sidebar">
+                    <div class="sidebar-title">My Account</div>
+                    <ul class="sidebar-nav">
+                        <li><a href="citizen.html" class="sidebar-link">📊 Dashboard</a></li>
+                        <li><a href="submit_complaint.html" class="sidebar-link">➕ Submit Complaint</a></li>
+                        <li><a href="my_complaints.html" class="sidebar-link">📋 My Complaints</a></li>
+                        <li><a href="public_complaints.html" class="sidebar-link">🌍 Public Feed</a></li>
+                        <li><a href="map.html" class="sidebar-link active">🗺️ Community Map</a></li>
+                        <li><a href="announcements.html" class="sidebar-link">📢 Announcements</a></li>
+                        <li><a href="volunteer.html" class="sidebar-link">🤝 Volunteer</a></li>
+                        <li><a href="feedback.html" class="sidebar-link">⭐ Feedback</a></li>
+                    </ul>
+                    <div class="sidebar-footer">
+                        <a href="profile.html" class="sidebar-link">👤 Profile</a>
+                        <a href="#" onclick="Auth.logout()" class="sidebar-link" style="color:var(--danger)">🚪 Logout</a>
+                    </div>
+                </aside>`;
+        }
+
+        // ── Map Init ─────────────────────────────────
+        const map = L.map('map').setView([13.0827, 80.2707], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap © CartoDB',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        const statusColors = {
+            'Pending':     '#f87171',
+            'In Progress': '#fbbf24',
+            'Resolved':    '#34d399',
+        };
+
+        function makePin(color) {
+            return L.divIcon({
+                html: `<div style="
+                    width:14px;height:14px;border-radius:50%;
+                    background:${color};border:2px solid rgba(255,255,255,.6);
+                    box-shadow:0 0 8px ${color}88;
+                "></div>`,
+                className: '',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7],
+            });
+        }
+
+        let allComplaints = [];
+        let markers = [];
+
+        function renderMarkers(filter) {
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            const filtered = filter === 'all'
+                ? allComplaints
+                : allComplaints.filter(c => c.category === filter);
+
+            filtered.filter(c => c.coordinates).forEach(c => {
+                const color = statusColors[c.status] || '#6b85a8';
+                const m = L.marker([c.coordinates.lat, c.coordinates.lng], { icon: makePin(color) });
+                m.bindPopup(`
+                    <div style="min-width:180px;">
+                        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:.3rem;">${c.category}</div>
+                        <div style="font-size:.83rem;margin-bottom:.25rem;">📍 ${c.location}</div>
+                        <div style="font-size:.83rem;margin-bottom:.25rem;">👤 ${c.userName}</div>
+                        <span style="display:inline-block;padding:.2rem .6rem;border-radius:99px;font-size:.72rem;font-weight:700;
+                            background:${color}22;color:${color};">${c.status}</span>
+                        <div style="margin-top:.6rem;">
+                            <a href="complaint_details.html?id=${c.id}" style="color:#e8503a;font-size:.82rem;">View Details →</a>
+                        </div>
+                    </div>
+                `);
+                m.addTo(map);
+                markers.push(m);
+            });
+        }
+
+        async function init() {
+            allComplaints = await Storage.getPublicComplaints();
+            renderMarkers('all');
+        }
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderMarkers(btn.dataset.cat);
+            });
+        });
+
+        init();
+    </script>
+</body>
+</html>

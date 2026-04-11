@@ -4,3 +4,4 @@ sqlalchemy
 bcrypt
 pyjwt
 python-dotenv
+python-multipart

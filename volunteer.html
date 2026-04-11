@@ -1,48 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Volunteer - CivicFix</title>
+    <title>Volunteer — CivicFix</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-
 <body>
-    <!-- Navbar injected by script.js -->
+    <script src="script.js"></script>
 
     <div class="dashboard-layout">
-        <aside class="sidebar">
-            <h3 class="mb-lg" style="padding-left: 1rem;">Menu</h3>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-title">My Account</div>
             <ul class="sidebar-nav">
-                <li><a href="citizen.html" class="sidebar-link">Dashboard</a></li>
-                <li><a href="submit_complaint.html" class="sidebar-link">Submit Complaint</a></li>
-                <li><a href="my_complaints.html" class="sidebar-link">My Complaints</a></li>
-                <li><a href="public_complaints.html" class="sidebar-link">Public Complaints</a></li>
-                <li><a href="announcements.html" class="sidebar-link">Announcements</a></li>
-                <li><a href="feedback.html" class="sidebar-link">Feedback</a></li>
-                <li><a href="volunteer.html" class="sidebar-link active">Volunteer</a></li>
+                <li><a href="citizen.html" class="sidebar-link">📊 Dashboard</a></li>
+                <li><a href="submit_complaint.html" class="sidebar-link">➕ Submit Complaint</a></li>
+                <li><a href="my_complaints.html" class="sidebar-link">📋 My Complaints</a></li>
+                <li><a href="public_complaints.html" class="sidebar-link">🌍 Public Feed</a></li>
+                <li><a href="map.html" class="sidebar-link">🗺️ Community Map</a></li>
+                <li><a href="announcements.html" class="sidebar-link">📢 Announcements</a></li>
+                <li><a href="volunteer.html" class="sidebar-link active">🤝 Volunteer</a></li>
+                <li><a href="feedback.html" class="sidebar-link">⭐ Feedback</a></li>
             </ul>
+            <div class="sidebar-footer">
+                <a href="profile.html" class="sidebar-link">👤 Profile</a>
+                <a href="#" onclick="Auth.logout()" class="sidebar-link" style="color:var(--danger)">🚪 Logout</a>
+            </div>
         </aside>
 
         <main class="main-content">
-            <h2 class="mb-lg">Get Involved</h2>
-
-            <div class="grid grid-cols-2 gap-md mb-xl">
-                <div class="card" style="grid-column: span 2;">
-                    <h3>Upcoming Community Events</h3>
-                    <p class="text-secondary mb-md">Join your neighbors in making a difference.</p>
-
-                    <div id="eventsList" class="flex flex-col gap-md">
-                        <!-- Loaded dynamically -->
-                    </div>
+            <div class="page-header">
+                <div>
+                    <h2>🤝 Volunteer Opportunities</h2>
+                    <p class="text-secondary">Join community events and make an impact</p>
                 </div>
+                <button class="btn btn-ghost btn-sm" id="sidebarToggle">☰</button>
             </div>
+
+            <div id="eventsList"><p class="text-secondary">Loading…</p></div>
         </main>
     </div>
 
-    <script src="script.js"></script>
     <script>
         const user = Auth.check();
         UI.renderNavbar();
@@ -52,49 +50,47 @@
             const container = document.getElementById('eventsList');
 
             if (events.length === 0) {
-                container.innerHTML = '<p class="text-secondary p-lg text-center bg-light" style="border-radius: var(--radius-md);">No upcoming events at the moment.</p>';
-            } else {
-                container.innerHTML = events.map(e => {
-                    const isJoined = e.attendees.includes(user.email);
-                    return `
-                        <div class="card p-md flex justify-between items-center" style="border-left: 5px solid var(--accent-color);">
-                            <div>
-                                <h4 style="font-size: 1.2rem;">${e.title}</h4>
-                                <p class="text-secondary mt-xs">📅 ${new Date(e.date).toLocaleString()} &bull; 📍 ${e.location}</p>
-                                <p class="mt-sm">${e.description}</p>
-                                <p class="mt-xs text-sm font-bold text-success">${e.attendees.length} Volunteers Participating</p>
+                container.innerHTML = '<div class="card"><p class="text-secondary">No upcoming events at the moment.</p></div>';
+                return;
+            }
+
+            container.innerHTML = events.map(e => {
+                const isJoined = e.attendees.includes(user.email);
+                return `
+                    <div class="card event-card mb-sm">
+                        <div class="flex justify-between items-start">
+                            <div style="flex:1;min-width:0;">
+                                <h4>${e.title}</h4>
+                                <p class="text-secondary text-sm mt-xs">📅 ${new Date(e.date).toLocaleString()} &bull; 📍 ${e.location}</p>
+                                <p class="text-sm mt-xs" style="color:var(--text-muted);">${e.description}</p>
+                                <p class="text-sm mt-xs" style="color:var(--success);">👥 ${e.attendees.length} volunteers participating</p>
                             </div>
-                            <button onclick="toggleParticipation('${e.id}', ${isJoined})" 
-                                    class="btn ${isJoined ? 'btn-outline' : 'btn-primary'}" 
-                                    style="width: 140px;">
-                                ${isJoined ? '✓ Joined' : 'Volunteer'}
+                            <button onclick="toggleJoin('${e.id}', ${isJoined})"
+                                    class="btn ${isJoined ? 'btn-primary' : 'btn-outline'} btn-sm"
+                                    style="margin-left:var(--sm);flex-shrink:0;min-width:120px;">
+                                ${isJoined ? '✓ Joined' : '+ Volunteer'}
                             </button>
                         </div>
-                    `;
-                }).join('');
-            }
+                    </div>
+                `;
+            }).join('');
         }
 
-        async function toggleParticipation(eventId, isJoined) {
+        async function toggleJoin(id, isJoined) {
             try {
                 if (isJoined) {
-                    if (confirm('Do you want to leave this event?')) {
-                        await Storage.leaveEvent(eventId);
-                    } else {
-                        return;
-                    }
+                    if (!confirm('Leave this event?')) return;
+                    await Storage.leaveEvent(id);
                 } else {
-                    await Storage.joinEvent(eventId);
-                    alert('You have successfully joined the event!');
+                    await Storage.joinEvent(id);
                 }
                 renderEvents();
-            } catch (err) {
-                alert('Failed to update participation. Please try again.');
+            } catch (e) {
+                alert('Action failed: ' + e.message);
             }
         }
 
         renderEvents();
     </script>
 </body>
-
 </html>

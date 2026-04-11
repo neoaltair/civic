@@ -1,82 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - CivicFix</title>
+    <title>Register — CivicFix</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .auth-wrap {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--lg);
+        }
+        .auth-card {
+            width: 100%;
+            max-width: 460px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-xl);
+            padding: var(--xl);
+        }
+        .auth-brand { text-align: center; margin-bottom: var(--lg); }
+        .auth-brand h1 { font-family: var(--font-head); font-size: 2.2rem; font-weight: 800; }
+        .auth-brand .dot { color: var(--accent); }
+        .auth-brand p { color: var(--text-muted); font-size: .9rem; margin-top: .35rem; }
+        .admin-toggle {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            padding: .7rem var(--sm);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            cursor: pointer;
+            font-size: .9rem;
+        }
+        .admin-toggle input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+    </style>
 </head>
-
 <body>
-    <!-- Navbar injected by script.js -->
+    <script src="script.js"></script>
+    <script>UI.renderNavbar();</script>
 
-    <main class="container flex justify-center items-center" style="min-height: 80vh;">
-        <div class="card" style="width: 100%; max-width: 450px;">
-            <h2 class="text-center mb-lg">Create Account</h2>
+    <div class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <h1>CivicFix<span class="dot">.</span></h1>
+                <p>Create your account</p>
+            </div>
+
+            <div id="message" class="hidden"></div>
 
             <form id="registerForm">
                 <div class="input-group">
                     <label for="name">Full Name</label>
-                    <input type="text" id="name" class="input-control" required placeholder="John Doe">
+                    <input type="text" id="name" class="input-control" placeholder="Your full name" required>
                 </div>
-
                 <div class="input-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" class="input-control" required placeholder="john@example.com">
+                    <input type="email" id="email" class="input-control" placeholder="you@example.com" required>
                 </div>
-
                 <div class="input-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" class="input-control" required placeholder="••••••••">
+                    <input type="password" id="password" class="input-control" placeholder="Minimum 6 characters" required>
                 </div>
-
-                <!-- Hidden admin registration trick for demo purposes -->
                 <div class="input-group">
-                    <label class="text-secondary" style="font-size: 0.8rem;">
-                        <input type="checkbox" id="isAdmin"> Register as Admin (Demo Only)
+                    <label class="admin-toggle">
+                        <input type="checkbox" id="isAdmin">
+                        Register as Administrator
                     </label>
                 </div>
-
-                <div id="message" class="mb-md text-center hidden"></div>
-
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Sign Up</button>
+                <button type="submit" class="btn btn-primary w-100" id="registerBtn">Create Account</button>
             </form>
 
-            <p class="text-center mt-md text-secondary">
-                Already have an account? <a href="login.html">Login</a>
+            <p class="text-center mt-md text-secondary text-sm">
+                Already have an account? <a href="login.html" style="color:var(--accent);">Sign in</a>
             </p>
         </div>
-    </main>
+    </div>
 
-    <script src="script.js"></script>
     <script>
-        UI.renderNavbar();
-
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const isAdmin = document.getElementById('isAdmin').checked;
-
+            const btn = document.getElementById('registerBtn');
             const msg = document.getElementById('message');
-            msg.textContent = 'Registering…';
-            msg.className = 'mb-md text-center text-secondary';
-            msg.classList.remove('hidden');
+
+            btn.textContent = 'Creating account…';
+            btn.disabled = true;
 
             const result = await Auth.register(name, email, password, isAdmin ? 'admin' : 'citizen');
+            btn.textContent = 'Create Account';
+            btn.disabled = false;
 
-            msg.textContent = result.message;
+            msg.classList.remove('hidden');
             if (result.success) {
-                msg.className = 'mb-md text-center text-success';
+                msg.className = 'msg-box msg-success';
+                msg.textContent = '✓ Account created! Redirecting to login…';
                 setTimeout(() => window.location.href = 'login.html', 1200);
             } else {
-                msg.className = 'mb-md text-center text-danger';
+                msg.className = 'msg-box msg-error';
+                msg.textContent = '✗ ' + result.message;
             }
         });
     </script>
 </body>
-
 </html>
