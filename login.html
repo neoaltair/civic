@@ -45,17 +45,19 @@
     <script>
         UI.renderNavbar();
 
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
-            const result = Auth.login(email, password);
-
             const msg = document.getElementById('message');
-            msg.textContent = result.message;
+            msg.textContent = 'Logging in…';
+            msg.className = 'mb-md text-center text-secondary';
             msg.classList.remove('hidden');
 
+            const result = await Auth.login(email, password);
+
+            msg.textContent = result.success ? 'Login successful! Redirecting…' : result.message;
             if (result.success) {
                 msg.className = 'mb-md text-center text-success';
                 setTimeout(() => {
@@ -64,7 +66,7 @@
                     } else {
                         window.location.href = 'citizen.html';
                     }
-                }, 1000);
+                }, 800);
             } else {
                 msg.className = 'mb-md text-center text-danger';
             }

@@ -47,8 +47,8 @@
         const user = Auth.check();
         UI.renderNavbar();
 
-        function renderEvents() {
-            const events = Storage.getEvents().sort((a, b) => new Date(a.date) - new Date(b.date));
+        async function renderEvents() {
+            const events = (await Storage.getEvents()).sort((a, b) => new Date(a.date) - new Date(b.date));
             const container = document.getElementById('eventsList');
 
             if (events.length === 0) {
@@ -75,22 +75,23 @@
             }
         }
 
-        function toggleParticipation(eventId, isJoined) {
-            if (isJoined) {
-                if (confirm('Do you want to leave this event?')) {
-                    Storage.leaveEvent(eventId, user.email);
+        async function toggleParticipation(eventId, isJoined) {
+            try {
+                if (isJoined) {
+                    if (confirm('Do you want to leave this event?')) {
+                        await Storage.leaveEvent(eventId);
+                    } else {
+                        return;
+                    }
+                } else {
+                    await Storage.joinEvent(eventId);
+                    alert('You have successfully joined the event!');
                 }
-            } else {
-                Storage.joinEvent(eventId, user.email);
-                alert('You have successfully joined the event!');
+                renderEvents();
+            } catch (err) {
+                alert('Failed to update participation. Please try again.');
             }
-            renderEvents();
         }
-
-        document.getElementById('volunteerForm')?.addEventListener('submit', (e) => { // Optional form for skills
-            e.preventDefault();
-            alert('Thank you for registering your interests!');
-        });
 
         renderEvents();
     </script>

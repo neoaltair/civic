@@ -31,24 +31,27 @@
         const urlParams = new URLSearchParams(window.location.search);
         const id = urlParams.get('id');
         const container = document.getElementById('complaintContainer');
-        if (!id) {
-            container.innerHTML = '<p class="text-danger p-xl text-center">Invalid Complaint ID.</p>';
-        } else {
-            const complaints = Storage.getComplaints();
-            const c = complaints.find(item => item.id === id);
+
+        async function init() {
+            if (!id) {
+                container.innerHTML = '<p class="text-danger p-xl text-center">Invalid Complaint ID.</p>';
+                return;
+            }
+            const c = await Storage.getComplaintById(id);
             if (!c) {
                 container.innerHTML = '<p class="text-danger p-xl text-center">Complaint not found.</p>';
             } else {
                 renderDetails(c);
             }
         }
+
         function renderDetails(c) {
             container.innerHTML = `
                 <div class="flex justify-between items-start mb-md">
                     <div>
                         <h1 style="font-size: 1.75rem;">${c.category}</h1>
                         <p class="text-secondary mt-xs">
-                            Issue #${c.id} &bull; ${UI.formatDate(c.timestamp)}
+                            Issue #${c.id.substring(0, 8)} &bull; ${UI.formatDate(c.timestamp)}
                         </p>
                     </div>
                     <span class="badge" 
@@ -100,6 +103,7 @@
                 }, 100);
             }
         }
+
         function getStatusColor(status) {
             switch (status) {
                 case 'Pending': return { bg: '#fff1f2', text: '#9e1c23' };
@@ -108,6 +112,8 @@
                 default: return { bg: '#f1f5f9', text: '#475569' };
             }
         }
+
+        init();
     </script>
 </body>
 </html>

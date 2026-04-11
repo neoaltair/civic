@@ -61,19 +61,32 @@
         Auth.checkAdmin();
         UI.renderNavbar();
 
-        const complaints = Storage.getComplaints();
+        async function init() {
+            const [stats, complaints] = await Promise.all([
+                Storage.getAdminStats(),
+                Storage.getComplaints(),
+            ]);
 
-        // Status Stats
-        const statusCounts = {};
-        complaints.forEach(c => {
-            statusCounts[c.status] = (statusCounts[c.status] || 0) + 1;
-        });
+            // Status Stats
+            const statusCounts = {};
+            complaints.forEach(c => {
+                statusCounts[c.status] = (statusCounts[c.status] || 0) + 1;
+            });
 
-        // Category Stats
-        const categoryCounts = {};
-        complaints.forEach(c => {
-            categoryCounts[c.category] = (categoryCounts[c.category] || 0) + 1;
-        });
+            // Category Stats
+            const categoryCounts = {};
+            complaints.forEach(c => {
+                categoryCounts[c.category] = (categoryCounts[c.category] || 0) + 1;
+            });
+
+            renderBarChart('statusChart', statusCounts);
+            renderBarChart('categoryChart', categoryCounts);
+
+            document.getElementById('pendingStat').textContent = stats.pending || 0;
+            document.getElementById('progressStat').textContent = stats.inProgress || 0;
+            document.getElementById('resolvedStat').textContent = stats.resolved || 0;
+            document.getElementById('totalStat').textContent = stats.totalComplaints || 0;
+        }
 
         function renderBarChart(containerId, data) {
             const container = document.getElementById(containerId);
@@ -98,14 +111,7 @@
             container.innerHTML = html || '<p class="text-secondary">No data available.</p>';
         }
 
-        renderBarChart('statusChart', statusCounts);
-        renderBarChart('categoryChart', categoryCounts);
-
-        document.getElementById('pendingStat').textContent = statusCounts['Pending'] || 0;
-        document.getElementById('progressStat').textContent = statusCounts['In Progress'] || 0;
-        document.getElementById('resolvedStat').textContent = statusCounts['Resolved'] || 0;
-        document.getElementById('totalStat').textContent = complaints.length;
-
+        init();
     </script>
 </body>
 

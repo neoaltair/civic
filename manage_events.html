@@ -67,8 +67,8 @@
         Auth.checkAdmin();
         UI.renderNavbar();
 
-        function renderEvents() {
-            const events = Storage.getEvents().reverse();
+        async function renderEvents() {
+            const events = (await Storage.getEvents()).reverse();
             const container = document.getElementById('eventsList');
 
             if (events.length === 0) {
@@ -88,23 +88,31 @@
             }
         }
 
-        document.getElementById('eventForm').addEventListener('submit', (e) => {
+        document.getElementById('eventForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const title = document.getElementById('title').value;
             const date = document.getElementById('date').value;
             const location = document.getElementById('location').value;
             const description = document.getElementById('description').value;
 
-            Storage.addEvent({ title, date, location, description });
-            alert('Event created successfully!');
-            e.target.reset();
-            renderEvents();
+            try {
+                await Storage.addEvent({ title, date, location, description });
+                alert('Event created successfully!');
+                e.target.reset();
+                renderEvents();
+            } catch (err) {
+                alert('Failed to create event.');
+            }
         });
 
-        function deleteEvent(id) {
+        async function deleteEvent(id) {
             if (confirm('Are you sure you want to delete this event?')) {
-                Storage.deleteEvent(id);
-                renderEvents();
+                try {
+                    await Storage.deleteEvent(id);
+                    renderEvents();
+                } catch (err) {
+                    alert('Failed to delete event.');
+                }
             }
         }
 

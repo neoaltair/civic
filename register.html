@@ -54,22 +54,24 @@
     <script>
         UI.renderNavbar();
 
-        document.getElementById('registerForm').addEventListener('submit', (e) => {
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const isAdmin = document.getElementById('isAdmin').checked;
 
-            const result = Auth.register(name, email, password, isAdmin ? 'admin' : 'citizen');
-
             const msg = document.getElementById('message');
-            msg.textContent = result.message;
+            msg.textContent = 'Registering…';
+            msg.className = 'mb-md text-center text-secondary';
             msg.classList.remove('hidden');
 
+            const result = await Auth.register(name, email, password, isAdmin ? 'admin' : 'citizen');
+
+            msg.textContent = result.message;
             if (result.success) {
                 msg.className = 'mb-md text-center text-success';
-                setTimeout(() => window.location.href = 'login.html', 1500);
+                setTimeout(() => window.location.href = 'login.html', 1200);
             } else {
                 msg.className = 'mb-md text-center text-danger';
             }

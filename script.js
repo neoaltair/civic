@@ -1,145 +1,222 @@
 /**
- * CivicFix - Shared Logic
- * Handles Storage, Authentication, and Common Utilities
+ * CivicFix - Shared Logic (API-backed)
+ * Auth reads localStorage synchronously.
+ * Storage methods are all async and hit http://localhost:8000
  */
 
-const Storage = {
-    get: (key) => JSON.parse(localStorage.getItem(key)) || [],
-    set: (key, value) => localStorage.setItem(key, JSON.stringify(value)),
+const API_BASE = 'http://localhost:8000';
 
-    // Users
-    getUsers: () => Storage.get('civic_users'),
-    addUser: (user) => {
-        const users = Storage.getUsers();
-        users.push(user);
-        Storage.set('civic_users', users);
-    },
-    findUser: (email) => {
-        const users = Storage.getUsers();
-        return users.find(u => u.email === email);
-    },
+// ─── API Fetch Helper ──────────────────────────────────────────────────────
 
-    // Current Session
-    getSession: () => JSON.parse(localStorage.getItem('civic_session')),
-    setSession: (user) => localStorage.setItem('civic_session', JSON.stringify(user)),
-    clearSession: () => localStorage.removeItem('civic_session'),
-
-    // Complaints
-    getComplaints: () => Storage.get('civic_complaints'),
-    addComplaint: (complaint) => {
-        const complaints = Storage.getComplaints();
-        complaint.id = Date.now().toString();
-        complaint.status = 'Pending';
-        complaint.timestamp = new Date().toISOString();
-        complaints.push(complaint);
-        Storage.set('civic_complaints', complaints);
-    },
-    updateComplaint: (id, updates) => {
-        let complaints = Storage.getComplaints();
-        complaints = complaints.map(c => c.id === id ? { ...c, ...updates } : c);
-        Storage.set('civic_complaints', complaints);
-    },
-
-    // Announcements
-    getAnnouncements: () => Storage.get('civic_announcements'),
-    addAnnouncement: (announcement) => {
-        const items = Storage.getAnnouncements();
-        announcement.id = Date.now().toString();
-        announcement.timestamp = new Date().toISOString();
-        items.push(announcement);
-        Storage.set('civic_announcements', items);
-    },
-
-    // Events
-    getEvents: () => Storage.get('civic_events'),
-    addEvent: (event) => {
-        const events = Storage.getEvents();
-        event.id = Date.now().toString();
-        event.attendees = []; // List of user emails
-        events.push(event);
-        Storage.set('civic_events', events);
-    },
-    deleteEvent: (id) => {
-        const events = Storage.getEvents().filter(e => e.id !== id);
-        Storage.set('civic_events', events);
-    },
-    joinEvent: (eventId, userEmail) => {
-        const events = Storage.getEvents();
-        const event = events.find(e => e.id === eventId);
-        if (event && !event.attendees.includes(userEmail)) {
-            event.attendees.push(userEmail);
-            Storage.set('civic_events', events);
-            return true;
-        }
-        return false;
-    },
-    leaveEvent: (eventId, userEmail) => {
-        const events = Storage.getEvents();
-        const event = events.find(e => e.id === eventId);
-        if (event) {
-            event.attendees = event.attendees.filter(email => email !== userEmail);
-            Storage.set('civic_events', events);
-            return true;
-        }
-        return false;
+async function apiFetch(path, options = {}) {
+    const session = JSON.parse(localStorage.getItem('civic_session'));
+    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    if (session && session.token) {
+        headers['Authorization'] = `Bearer ${session.token}`;
     }
-};
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    if (res.status === 401) {
+        localStorage.removeItem('civic_session');
+        window.location.href = 'login.html';
+        return;
+    }
+    return res;
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────
 
 const Auth = {
-    register: (name, email, password, role = 'citizen') => {
-        if (Storage.findUser(email)) {
-            return { success: false, message: 'Email already registered' };
-        }
-        Storage.addUser({ name, email, password, role });
-        return { success: true, message: 'Registration successful' };
-    },
-
-    login: (email, password) => {
-        const user = Storage.findUser(email);
-        if (user && user.password === password) {
-            Storage.setSession({ name: user.name, email: user.email, role: user.role });
-            return { success: true, user };
-        }
-        return { success: false, message: 'Invalid credentials' };
-    },
-
-    logout: () => {
-        Storage.clearSession();
-        window.location.href = 'login.html';
-    },
-
+    // SYNCHRONOUS — reads localStorage directly
     check: () => {
-        const session = Storage.getSession();
+        const session = JSON.parse(localStorage.getItem('civic_session'));
         if (!session) {
             window.location.href = 'login.html';
+            return null;
         }
         return session;
     },
 
     checkAdmin: () => {
-        const session = Auth.check();
+        const session = JSON.parse(localStorage.getItem('civic_session'));
+        if (!session) {
+            window.location.href = 'login.html';
+            return null;
+        }
         if (session.role !== 'admin') {
             alert('Access Denied');
             window.location.href = 'citizen.html';
+            return null;
         }
-    }
+        return session;
+    },
+
+    // ASYNC
+    login: async (email, password) => {
+        try {
+            const res = await fetch(`${API_BASE}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                return { success: false, message: err.detail || 'Invalid credentials' };
+            }
+            const data = await res.json();
+            const session = { token: data.access_token, ...data.user };
+            localStorage.setItem('civic_session', JSON.stringify(session));
+            return { success: true, user: data.user };
+        } catch (e) {
+            return { success: false, message: 'Cannot reach server. Is the backend running?' };
+        }
+    },
+
+    register: async (name, email, password, role = 'citizen') => {
+        try {
+            const res = await fetch(`${API_BASE}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password, role }),
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                return { success: false, message: err.detail || 'Registration failed' };
+            }
+            return { success: true, message: 'Registration successful' };
+        } catch (e) {
+            return { success: false, message: 'Cannot reach server. Is the backend running?' };
+        }
+    },
+
+    logout: () => {
+        localStorage.removeItem('civic_session');
+        window.location.href = 'login.html';
+    },
 };
 
-// Initialize some dummy data if empty
-const Init = () => {
-    if (Storage.getUsers().length === 0) {
-        // Create default admin
-        Storage.addUser({
-            name: 'Admin User',
-            email: 'admin@civic.com',
-            password: 'admin',
-            role: 'admin'
+// ─── Storage (async API calls) ────────────────────────────────────────────
+
+const Storage = {
+    // Session helpers (kept for UI.renderNavbar compatibility)
+    getSession: () => JSON.parse(localStorage.getItem('civic_session')),
+    setSession: (s) => localStorage.setItem('civic_session', JSON.stringify(s)),
+    clearSession: () => localStorage.removeItem('civic_session'),
+
+    // ── Complaints ──────────────────────────────────────────────────────────
+
+    getComplaints: async () => {
+        const res = await apiFetch('/complaints');
+        if (!res || !res.ok) return [];
+        return await res.json();
+    },
+
+    getPublicComplaints: async () => {
+        const res = await apiFetch('/complaints/public');
+        if (!res || !res.ok) return [];
+        return await res.json();
+    },
+
+    getComplaintById: async (id) => {
+        const res = await apiFetch(`/complaints/${id}`);
+        if (!res || !res.ok) return null;
+        return await res.json();
+    },
+
+    addComplaint: async (data) => {
+        const res = await apiFetch('/complaints', {
+            method: 'POST',
+            body: JSON.stringify(data),
         });
-        console.log('Default admin created: admin@civic.com / admin');
-    }
+        if (!res || !res.ok) throw new Error('Failed to submit complaint');
+        return await res.json();
+    },
+
+    updateComplaint: async (id, updates) => {
+        const res = await apiFetch(`/complaints/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(updates),
+        });
+        if (!res || !res.ok) throw new Error('Failed to update complaint');
+        return await res.json();
+    },
+
+    upvoteComplaint: async (id) => {
+        const res = await apiFetch(`/complaints/${id}/upvote`, { method: 'POST' });
+        if (!res || !res.ok) throw new Error('Failed to upvote');
+        return await res.json();
+    },
+
+    // ── Announcements ────────────────────────────────────────────────────────
+
+    getAnnouncements: async () => {
+        const res = await apiFetch('/announcements');
+        if (!res || !res.ok) return [];
+        return await res.json();
+    },
+
+    addAnnouncement: async (data) => {
+        const res = await apiFetch('/announcements', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        if (!res || !res.ok) throw new Error('Failed to post announcement');
+        return await res.json();
+    },
+
+    deleteAnnouncement: async (id) => {
+        const res = await apiFetch(`/announcements/${id}`, { method: 'DELETE' });
+        if (!res || !res.ok) throw new Error('Failed to delete announcement');
+    },
+
+    // ── Events ──────────────────────────────────────────────────────────────
+
+    getEvents: async () => {
+        const res = await apiFetch('/events');
+        if (!res || !res.ok) return [];
+        return await res.json();
+    },
+
+    addEvent: async (data) => {
+        const res = await apiFetch('/events', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        if (!res || !res.ok) throw new Error('Failed to create event');
+        return await res.json();
+    },
+
+    deleteEvent: async (id) => {
+        const res = await apiFetch(`/events/${id}`, { method: 'DELETE' });
+        if (!res || !res.ok) throw new Error('Failed to delete event');
+    },
+
+    joinEvent: async (id) => {
+        const res = await apiFetch(`/events/${id}/join`, { method: 'POST' });
+        if (!res || !res.ok) throw new Error('Failed to join event');
+        return await res.json();
+    },
+
+    leaveEvent: async (id) => {
+        const res = await apiFetch(`/events/${id}/leave`, { method: 'POST' });
+        if (!res || !res.ok) throw new Error('Failed to leave event');
+        return await res.json();
+    },
+
+    // ── Admin Stats ──────────────────────────────────────────────────────────
+
+    getAdminStats: async () => {
+        const res = await apiFetch('/admin/stats');
+        if (!res || !res.ok) return { totalUsers: 0, totalComplaints: 0, pending: 0, resolved: 0, inProgress: 0 };
+        return await res.json();
+    },
+
+    // ── Feedback (localStorage only — no backend endpoint) ─────────────────
+    get: (key) => JSON.parse(localStorage.getItem(key)) || [],
+    set: (key, value) => localStorage.setItem(key, JSON.stringify(value)),
 };
 
-// UI Helpers
+// ─── UI Helpers ───────────────────────────────────────────────────────────
+
 const UI = {
     formatDate: (isoString) => {
         return new Date(isoString).toLocaleDateString('en-US', {
@@ -147,13 +224,11 @@ const UI = {
         });
     },
 
-    // Inject Navbar based on session
     renderNavbar: () => {
         const session = Storage.getSession();
         const nav = document.createElement('nav');
         nav.className = 'navbar';
 
-        // Define links based on role
         let links = '';
         if (!session) {
             links = `
@@ -186,6 +261,3 @@ const UI = {
         document.body.prepend(nav);
     }
 };
-
-// Run initialization
-Init();

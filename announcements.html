@@ -40,22 +40,26 @@
         const user = Auth.check();
         UI.renderNavbar();
 
-        const announcements = Storage.getAnnouncements().reverse();
-        const container = document.getElementById('announcementList');
+        async function init() {
+            const announcements = (await Storage.getAnnouncements()).reverse();
+            const container = document.getElementById('announcementList');
 
-        if (announcements.length === 0) {
-            container.innerHTML = '<p class="text-secondary">No announcements available at this time.</p>';
-        } else {
-            container.innerHTML = announcements.map(a => `
-                <div class="card" style="border-left: 5px solid var(--secondary-color);">
-                    <div class="flex justify-between items-center mb-sm">
-                        <h3 style="font-size: 1.25rem;">${a.title}</h3>
-                        <span class="text-secondary" style="font-size: 0.875rem;">${UI.formatDate(a.timestamp)}</span>
+            if (announcements.length === 0) {
+                container.innerHTML = '<p class="text-secondary">No announcements available at this time.</p>';
+            } else {
+                container.innerHTML = announcements.map(a => `
+                    <div class="card" style="border-left: 5px solid var(--secondary-color);">
+                        <div class="flex justify-between items-center mb-sm">
+                            <h3 style="font-size: 1.25rem;">${a.title}</h3>
+                            <span class="text-secondary" style="font-size: 0.875rem;">${UI.formatDate(a.timestamp)}</span>
+                        </div>
+                        <p>${a.content}</p>
                     </div>
-                    <p>${a.content}</p>
-                </div>
-            `).join('');
+                `).join('');
+            }
         }
+
+        init();
     </script>
 </body>
 

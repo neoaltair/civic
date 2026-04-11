@@ -66,35 +66,38 @@
         Auth.checkAdmin();
         UI.renderNavbar();
 
-        // Load stats
-        const complaints = Storage.getComplaints();
-        const pending = complaints.filter(c => c.status === 'Pending').length;
-        const resolved = complaints.filter(c => c.status === 'Resolved').length;
-        const users = Storage.getUsers().length;
+        async function init() {
+            const [stats, complaints] = await Promise.all([
+                Storage.getAdminStats(),
+                Storage.getComplaints(),
+            ]);
 
-        document.getElementById('pendingCount').textContent = pending;
-        document.getElementById('resolvedCount').textContent = resolved;
-        document.getElementById('userCount').textContent = users;
+            document.getElementById('pendingCount').textContent = stats.pending;
+            document.getElementById('resolvedCount').textContent = stats.resolved;
+            document.getElementById('userCount').textContent = stats.totalUsers;
 
-        // Load recent activity
-        const recent = complaints.slice(-5).reverse();
-        const container = document.getElementById('recentComplaints');
+            // Load recent activity (last 5 complaints)
+            const recent = complaints.slice().reverse().slice(0, 5);
+            const container = document.getElementById('recentComplaints');
 
-        if (recent.length > 0) {
-            container.innerHTML = recent.map(c => `
-                <div class="card p-sm flex justify-between items-center">
-                    <div>
-                        <h4 style="font-size: 1.1rem;">${c.category} - <span class="text-secondary text-sm">${c.location}</span></h4>
-                        <span class="text-secondary" style="font-size: 0.9rem;">Submitted by ${c.userName} on ${UI.formatDate(c.timestamp)}</span>
+            if (recent.length > 0) {
+                container.innerHTML = recent.map(c => `
+                    <div class="card p-sm flex justify-between items-center">
+                        <div>
+                            <h4 style="font-size: 1.1rem;">${c.category} - <span class="text-secondary text-sm">${c.location}</span></h4>
+                            <span class="text-secondary" style="font-size: 0.9rem;">Submitted by ${c.userName} on ${UI.formatDate(c.timestamp)}</span>
+                        </div>
+                        <span class="badge ${c.status === 'Resolved' ? 'text-success' : 'text-danger'}" style="font-weight: 600;">
+                            ${c.status}
+                        </span>
                     </div>
-                    <span class="badge ${c.status === 'Resolved' ? 'text-success' : 'text-danger'}" style="font-weight: 600;">
-                        ${c.status}
-                    </span>
-                </div>
-            `).join('');
-        } else {
-            container.innerHTML = '<p class="text-secondary">No complaints found.</p>';
+                `).join('');
+            } else {
+                container.innerHTML = '<p class="text-secondary">No complaints found.</p>';
+            }
         }
+
+        init();
     </script>
 </body>
 

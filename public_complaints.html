@@ -40,13 +40,19 @@
         const user = Auth.check();
         UI.renderNavbar();
 
-        // Get all public complaints
-        const complaints = Storage.getComplaints().filter(c => c.isPublic).reverse();
-        const container = document.getElementById('publicList');
+        async function init() {
+            const complaints = (await Storage.getPublicComplaints()).reverse();
+            const container = document.getElementById('publicList');
 
-        if (complaints.length === 0) {
-            container.innerHTML = '<p class="text-secondary">No public complaints found.</p>';
-        } else {
+            if (complaints.length === 0) {
+                container.innerHTML = '<p class="text-secondary">No public complaints found.</p>';
+            } else {
+                renderList(complaints);
+            }
+        }
+
+        function renderList(complaints) {
+            const container = document.getElementById('publicList');
             container.innerHTML = complaints.map(c => `
                 <div class="card" onclick="window.location.href='complaint_details.html?id=${c.id}'" style="cursor: pointer;">
                     <div class="flex justify-between items-center mb-sm">
@@ -57,8 +63,9 @@
                     <p class="mb-md" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${c.description}</p>
                     
                     <div class="flex gap-md items-center mt-md pt-sm border-t" style="border-top: 1px solid var(--border-color);">
-                        <button class="btn btn-outline" onclick="upvote('${c.id}'); event.stopPropagation();" style="padding: 0.5rem 1rem;">
-                            👍 Upvote (${c.upvotes || 0})
+                        <button class="btn ${c.upvotedBy && c.upvotedBy.includes(user.email) ? 'btn-primary' : 'btn-outline'}" 
+                                onclick="upvote('${c.id}'); event.stopPropagation();" style="padding: 0.5rem 1rem;">
+                            👍 ${c.upvotedBy && c.upvotedBy.includes(user.email) ? 'Upvoted' : 'Upvote'} (${c.upvotes || 0})
                         </button>
                         <span class="badge ${c.status.toLowerCase()}" 
                               style="background: ${c.status === 'Resolved' ? '#def7ec' : '#fff1f2'}; 
@@ -71,16 +78,18 @@
             `).join('');
         }
 
-        function upvote(id) {
-            // Simple simulation: increment upvote in local storage
-            let allComplaints = Storage.getComplaints();
-            const complaint = allComplaints.find(c => c.id === id);
-            if (complaint) {
-                complaint.upvotes = (complaint.upvotes || 0) + 1;
-                Storage.set('civic_complaints', allComplaints);
-                location.reload(); // Refresh to show new count
+        async function upvote(id) {
+            try {
+                const updated = await Storage.upvoteComplaint(id);
+                // Re-fetch and re-render to reflect new state
+                const complaints = (await Storage.getPublicComplaints()).reverse();
+                renderList(complaints);
+            } catch (err) {
+                alert('Failed to upvote. Please try again.');
             }
         }
+
+        init();
     </script>
 </body>
 

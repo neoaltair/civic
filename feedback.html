@@ -75,68 +75,72 @@
         const user = Auth.check();
         UI.renderNavbar();
 
-        // Populate complaints dropdown
-        const resolvedComplaints = Storage.getComplaints().filter(c => c.userEmail === user.email && c.status === 'Resolved');
-        const select = document.getElementById('complaintId');
-
-        // Check for ID in URLqueryParams
         const urlParams = new URLSearchParams(window.location.search);
         const preSelectedId = urlParams.get('id');
 
-        if (resolvedComplaints.length === 0) {
-            select.innerHTML = '<option value="">No resolved complaints found</option>';
-            select.disabled = true;
-        } else {
-            select.innerHTML = '<option value="">Select a complaint</option>' +
-                resolvedComplaints.map(c => `
-                    <option value="${c.id}" ${preSelectedId === c.id ? 'selected' : ''}>
-                        ${c.category} - ${UI.formatDate(c.timestamp)}
-                    </option>
-                `).join('');
-        }
+        async function init() {
+            // Populate complaints dropdown from API
+            const allComplaints = await Storage.getComplaints();
+            const resolvedComplaints = allComplaints.filter(c => c.userEmail === user.email && c.status === 'Resolved');
+            const select = document.getElementById('complaintId');
 
-        // Handle submission
-        document.getElementById('feedbackForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (select.disabled) return;
+            if (resolvedComplaints.length === 0) {
+                select.innerHTML = '<option value="">No resolved complaints found</option>';
+                select.disabled = true;
+            } else {
+                select.innerHTML = '<option value="">Select a complaint</option>' +
+                    resolvedComplaints.map(c => `
+                        <option value="${c.id}" ${preSelectedId === c.id ? 'selected' : ''}>
+                            ${c.category} - ${UI.formatDate(c.timestamp)}
+                        </option>
+                    `).join('');
+            }
 
-            const complaintId = select.value;
-            const rating = document.querySelector('input[name="rating"]:checked').value;
-            const comments = document.getElementById('comments').value;
+            // Handle submission (feedback stays in localStorage)
+            document.getElementById('feedbackForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (select.disabled) return;
 
-            const feedback = {
-                userEmail: user.email,
-                complaintId,
-                rating,
-                comments,
-                timestamp: new Date().toISOString()
-            };
+                const complaintId = select.value;
+                const rating = document.querySelector('input[name="rating"]:checked').value;
+                const comments = document.getElementById('comments').value;
 
-            const allFeedback = Storage.get('civic_feedback');
-            allFeedback.push(feedback);
-            Storage.set('civic_feedback', allFeedback);
+                const feedback = {
+                    userEmail: user.email,
+                    complaintId,
+                    rating,
+                    comments,
+                    timestamp: new Date().toISOString()
+                };
 
-            alert('Thank you for your feedback!');
-            window.location.href = 'feedback.html';
-        });
+                const allFeedback = Storage.get('civic_feedback');
+                allFeedback.push(feedback);
+                Storage.set('civic_feedback', allFeedback);
 
-        // Load History
-        const history = Storage.get('civic_feedback').filter(f => f.userEmail === user.email).reverse();
-        const historyContainer = document.getElementById('historyList');
+                alert('Thank you for your feedback!');
+                window.location.href = 'feedback.html';
+            });
 
-        if (history.length === 0) {
-            historyContainer.innerHTML = '<p class="text-secondary">No feedback submitted yet.</p>';
-        } else {
-            historyContainer.innerHTML = history.map(f => `
-                <div class="card p-md">
-                    <div class="flex justify-between">
-                        <strong>Complaint ID: ${f.complaintId.substring(0, 8)}...</strong>
-                        <span>${'⭐'.repeat(f.rating)}</span>
+            // Load History (from localStorage)
+            const history = Storage.get('civic_feedback').filter(f => f.userEmail === user.email).reverse();
+            const historyContainer = document.getElementById('historyList');
+
+            if (history.length === 0) {
+                historyContainer.innerHTML = '<p class="text-secondary">No feedback submitted yet.</p>';
+            } else {
+                historyContainer.innerHTML = history.map(f => `
+                    <div class="card p-md">
+                        <div class="flex justify-between">
+                            <strong>Complaint ID: ${f.complaintId.substring(0, 8)}...</strong>
+                            <span>${'⭐'.repeat(f.rating)}</span>
+                        </div>
+                        <p class="mt-sm">${f.comments}</p>
                     </div>
-                    <p class="mt-sm">${f.comments}</p>
-                </div>
-            `).join('');
+                `).join('');
+            }
         }
+
+        init();
     </script>
 </body>
 

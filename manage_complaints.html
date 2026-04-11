@@ -51,10 +51,12 @@
 
         const container = document.getElementById('complaintsList');
         const filterSelect = document.getElementById('filterStatus');
+        let allComplaints = [];
 
-        function renderComplaints() {
+        async function renderComplaints() {
+            allComplaints = await Storage.getComplaints();
             const filter = filterSelect.value;
-            let complaints = Storage.getComplaints().reverse();
+            let complaints = allComplaints.slice().reverse();
 
             if (filter !== 'all') {
                 complaints = complaints.filter(c => c.status === filter);
@@ -73,7 +75,7 @@
                                 <h3 style="font-size: 1.25rem;">${c.category}</h3>
                                 <span class="badge" 
                                       style="background: #e2e8f0; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">
-                                    ${c.id}
+                                    ${c.id.substring(0, 8)}
                                 </span>
                             </div>
                             <p class="text-secondary mt-xs">
@@ -106,7 +108,7 @@
                             <option value="Resolved" ${c.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
                             <option value="Rejected" ${c.status === 'Rejected' ? 'selected' : ''}>Rejected</option>
                         </select>
-                        <input type="text" id="remark-${c.id}" class="input-control" placeholder="Add administrative remarks..." style="flex: 1; padding: 0.4rem;">
+                        <input type="text" id="remark-${c.id}" class="input-control" placeholder="Add administrative remarks..." style="flex: 1; padding: 0.4rem;" value="${c.remarks || ''}">
                         <button onclick="updateStatus('${c.id}')" class="btn btn-primary" style="padding: 0.4rem 1rem;">Update</button>
                     </div>
                 </div>
@@ -122,13 +124,17 @@
             }
         }
 
-        function updateStatus(id) {
+        async function updateStatus(id) {
             const status = document.getElementById(`status-${id}`).value;
             const remarks = document.getElementById(`remark-${id}`).value;
 
-            Storage.updateComplaint(id, { status, remarks: remarks || undefined });
-            alert(`Complaint updated to ${status}`);
-            renderComplaints();
+            try {
+                await Storage.updateComplaint(id, { status, remarks: remarks || undefined });
+                alert(`Complaint updated to ${status}`);
+                renderComplaints();
+            } catch (err) {
+                alert('Failed to update complaint. Please try again.');
+            }
         }
 
         filterSelect.addEventListener('change', renderComplaints);

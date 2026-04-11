@@ -134,7 +134,7 @@
             document.getElementById('location-status').textContent = `Selected Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
         });
 
-        document.getElementById('complaintForm').addEventListener('submit', (e) => {
+        document.getElementById('complaintForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const category = document.getElementById('category').value;
@@ -144,28 +144,26 @@
             const lat = document.getElementById('lat').value;
             const lng = document.getElementById('lng').value;
 
-            // Image handling would normally involve file upload, here we just simulate
             const imageInput = document.getElementById('image');
             const hasImage = imageInput.files.length > 0;
             const imageName = hasImage ? imageInput.files[0].name : null;
 
             const complaint = {
-                userEmail: user.email,
-                userName: user.name,
                 category,
                 location,
                 description,
                 imageName,
                 isPublic,
-                coordinates: (lat && lng) ? { lat, lng } : null,
-                upvotes: 0,
-                comments: []
+                coordinates: (lat && lng) ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null,
             };
 
-            Storage.addComplaint(complaint);
-
-            alert('Complaint submitted successfully!');
-            window.location.href = 'my_complaints.html';
+            try {
+                await Storage.addComplaint(complaint);
+                alert('Complaint submitted successfully!');
+                window.location.href = 'my_complaints.html';
+            } catch (err) {
+                alert('Failed to submit complaint. Please try again.');
+            }
         });
     </script>
 </body>

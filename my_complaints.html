@@ -40,45 +40,50 @@
         const user = Auth.check();
         UI.renderNavbar();
 
-        const complaints = Storage.getComplaints().filter(c => c.userEmail === user.email).reverse();
-        const container = document.getElementById('complaintsList');
+        async function init() {
+            const allComplaints = await Storage.getComplaints();
+            const complaints = allComplaints.filter(c => c.userEmail === user.email).reverse();
+            const container = document.getElementById('complaintsList');
 
-        if (complaints.length === 0) {
-            container.innerHTML = `
-                <div class="card p-xl text-center">
-                    <p class="text-secondary text-lg">You haven't submitted any complaints yet.</p>
-                    <a href="submit_complaint.html" class="btn btn-primary mt-md">Submit Your First Complaint</a>
-                </div>
-            `;
-        } else {
-            container.innerHTML = complaints.map(c => `
-                <div class="card" onclick="window.location.href='complaint_details.html?id=${c.id}'" style="cursor: pointer;">
-                    <div class="flex justify-between items-center mb-sm">
-                        <h3 style="font-size: 1.25rem;">${c.category}</h3>
-                        <span class="badge ${c.status.toLowerCase()}" 
-                              style="background: ${c.status === 'Resolved' ? '#def7ec' : '#fff1f2'}; 
-                                     color: ${c.status === 'Resolved' ? '#03543f' : '#9e1c23'};
-                                     padding: 0.25rem 0.75rem; border-radius: 99px; font-weight: 600; font-size: 0.875rem;">
-                            ${c.status}
-                        </span>
+            if (complaints.length === 0) {
+                container.innerHTML = `
+                    <div class="card p-xl text-center">
+                        <p class="text-secondary text-lg">You haven't submitted any complaints yet.</p>
+                        <a href="submit_complaint.html" class="btn btn-primary mt-md">Submit Your First Complaint</a>
                     </div>
-                    <p class="text-secondary mb-sm">📍 ${c.location} &bull; ${UI.formatDate(c.timestamp)}</p>
-                    <p class="mb-md" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${c.description}</p>
-                    
-                    ${c.remarks ? `
-                        <div class="p-sm" style="background: #f8fafc; border-left: 4px solid var(--primary-color);">
-                            <strong>Admin Remark:</strong> ${c.remarks}
+                `;
+            } else {
+                container.innerHTML = complaints.map(c => `
+                    <div class="card" onclick="window.location.href='complaint_details.html?id=${c.id}'" style="cursor: pointer;">
+                        <div class="flex justify-between items-center mb-sm">
+                            <h3 style="font-size: 1.25rem;">${c.category}</h3>
+                            <span class="badge ${c.status.toLowerCase()}" 
+                                  style="background: ${c.status === 'Resolved' ? '#def7ec' : '#fff1f2'}; 
+                                         color: ${c.status === 'Resolved' ? '#03543f' : '#9e1c23'};
+                                         padding: 0.25rem 0.75rem; border-radius: 99px; font-weight: 600; font-size: 0.875rem;">
+                                ${c.status}
+                            </span>
                         </div>
-                    ` : ''}
+                        <p class="text-secondary mb-sm">📍 ${c.location} &bull; ${UI.formatDate(c.timestamp)}</p>
+                        <p class="mb-md" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${c.description}</p>
+                        
+                        ${c.remarks ? `
+                            <div class="p-sm" style="background: #f8fafc; border-left: 4px solid var(--primary-color);">
+                                <strong>Admin Remark:</strong> ${c.remarks}
+                            </div>
+                        ` : ''}
 
-                    ${c.status === 'Resolved' ? `
-                         <div class="mt-md pt-md border-t" style="border-top: 1px solid var(--border-color);">
-                            <a href="feedback.html?id=${c.id}" class="btn btn-outline" style="font-size: 0.875rem;" onclick="event.stopPropagation()">Give Feedback</a>
-                         </div>
-                    ` : ''}
-                </div>
-            `).join('');
+                        ${c.status === 'Resolved' ? `
+                             <div class="mt-md pt-md border-t" style="border-top: 1px solid var(--border-color);">
+                                <a href="feedback.html?id=${c.id}" class="btn btn-outline" style="font-size: 0.875rem;" onclick="event.stopPropagation()">Give Feedback</a>
+                             </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+            }
         }
+
+        init();
     </script>
 </body>
 
